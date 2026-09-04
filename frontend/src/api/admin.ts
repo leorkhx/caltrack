@@ -1,0 +1,38 @@
+import { apiClient } from "./client";
+import type { AdminFoodEntry, FoodEntryInput, PaginatedAdminFoodEntries, ReportsData, User } from "../types";
+import type { DateRangeParams } from "./foodEntries";
+
+export interface AdminListParams extends DateRangeParams {
+  user_id?: number;
+  page?: number;
+  page_size?: number;
+}
+
+export async function fetchAllUsers(): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>("/api/admin/users");
+  return data;
+}
+
+export async function fetchAllEntries(params: AdminListParams = {}): Promise<PaginatedAdminFoodEntries> {
+  const { data } = await apiClient.get<PaginatedAdminFoodEntries>("/api/admin/food-entries", { params });
+  return data;
+}
+
+export async function createEntryAsAdmin(input: FoodEntryInput): Promise<AdminFoodEntry> {
+  const { data } = await apiClient.post<AdminFoodEntry>("/api/admin/food-entries", input);
+  return data;
+}
+
+export async function updateEntryAsAdmin(id: number, input: Partial<FoodEntryInput>): Promise<AdminFoodEntry> {
+  const { data } = await apiClient.put<AdminFoodEntry>(`/api/admin/food-entries/${id}`, input);
+  return data;
+}
+
+export async function deleteEntryAsAdmin(id: number): Promise<void> {
+  await apiClient.delete(`/api/admin/food-entries/${id}`);
+}
+
+export async function fetchReports(): Promise<ReportsData> {
+  const { data } = await apiClient.get<ReportsData>("/api/admin/reports");
+  return data;
+}
