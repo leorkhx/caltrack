@@ -3,30 +3,26 @@ import { Box, CircularProgress, CssBaseline, ThemeProvider, Typography } from "@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { RequireAdmin } from "./auth/RequireAdmin";
+import { SignInPage } from "./pages/SignIn/SignInPage";
 import { FoodEntriesPage } from "./pages/FoodEntries/FoodEntriesPage";
 import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
 import { useCurrentUser } from "./hooks/useCurrentUser";
-import { getActiveToken } from "./auth/accounts";
+import { clearActiveToken, getActiveToken } from "./auth/accounts";
 import { theme } from "./theme";
+import type { User } from "./types";
 
-function AppShell({ children }: { children: ReactNode }) {
-  const { user, loading } = useCurrentUser();
+interface AppShellProps {
+  user: User | null;
+  loading: boolean;
+  onSignOut: () => void;
+  children: ReactNode;
+}
 
-  if (!getActiveToken()) {
-    return (
-      <Box sx={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
-        <Typography color="error">
-          VITE_AUTH_TOKEN is not set. Copy frontend/.env.example to frontend/.env and set it to one
-          of the backend's predefined tokens.
-        </Typography>
-      </Box>
-    );
-  }
-
+function AppShell({ user, loading, onSignOut, children }: AppShellProps) {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar currentUser={user} />
+      <Sidebar currentUser={user} onSignOut={onSignOut} />
       <Box sx={{ flex: 1, minWidth: 0, p: "34px 40px 90px 24px", maxWidth: 1240 }}>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", pt: 10 }}>
@@ -34,7 +30,7 @@ function AppShell({ children }: { children: ReactNode }) {
           </Box>
         ) : !user ? (
           <Typography color="error">
-            Could not resolve VITE_AUTH_TOKEN to a user. Check it matches a token in backend/.env.
+            Could not resolve the active token to a user. Check it matches a token in backend/.env.
           </Typography>
         ) : (
           children
@@ -45,18 +41,31 @@ function AppShell({ children }: { children: ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, reload } = useCurrentUser();
+
+  if (!getActiveToken()) {
+    return <SignInPage onSignedIn={reload} />;
+  }
+
+  const handleSignOut = () => {
+    clearActiveToken();
+    reload();
+  };
 
   return (
     <Routes>
       <Route
         path="/"
-        element={<AppShell>{user && <FoodEntriesPage currentUser={user} />}</AppShell>}
+        element={
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+            {user && <FoodEntriesPage currentUser={user} />}
+          </AppShell>
+        }
       />
       <Route
         path="/admin/entries"
         element={
-          <AppShell>
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
             <RequireAdmin user={user} loading={loading}>
               {user && <AllEntriesPage currentUserId={user.id} />}
             </RequireAdmin>
@@ -66,7 +75,7 @@ function AppRoutes() {
       <Route
         path="/admin/reports"
         element={
-          <AppShell>
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
             <RequireAdmin user={user} loading={loading}>
               <ReportsPage />
             </RequireAdmin>

@@ -6,20 +6,27 @@ React + TypeScript + Material UI (v7), Vite, React Router.
 
 ```bash
 cd frontend
-cp .env.example .env     # set VITE_AUTH_TOKEN to match a token in backend/.env
 pnpm install
 pnpm dev                  # http://localhost:3000
+```
+
+`frontend/.env` is git-ignored; on a fresh clone create it with:
+
+```
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 The backend must be running on http://localhost:8000 (see `../backend/README.md`).
 
 ## Auth
 
-There is no login screen. The frontend authenticates as a single predefined
-user via `VITE_AUTH_TOKEN` in `.env`, matching one of the backend's
-`USER_TOKEN` / `USER2_TOKEN` / `ADMIN_TOKEN` values. To demo a different user
-or role, change `VITE_AUTH_TOKEN` and restart `pnpm dev`. The backend is the
-actual authority on who's allowed to see what — a non-admin token gets a 403
+There is no signup — per the assignment, auth is a predefined per-user bearer
+token, not a real account system. The sign-in page (`pages/SignIn`) is just a
+thin UI over that: paste a token, it's validated against `GET /api/users/me`,
+and stored in `localStorage` (`auth/accounts.ts`) so it's attached to every
+API request. To demo a different user or role, sign out (bottom of the
+sidebar) and sign back in with a different token — the backend is the actual
+authority on who's allowed to see what, a non-admin token still gets a 403
 from `/api/admin/*` regardless of what the frontend shows.
 
 ## Structure
@@ -27,12 +34,13 @@ from `/api/admin/*` regardless of what the frontend shows.
 ```
 src/
 ├── api/         axios client (attaches bearer token) + typed calls per resource
-├── auth/        active-token resolution (VITE_AUTH_TOKEN), RequireAdmin route guard
+├── auth/        localStorage-backed active-token storage, RequireAdmin route guard
 ├── components/  Sidebar, EntryDialog (FDC autocomplete + validation), EntryRow,
 │                CalorieRing, StatCard, FiltersBar
 ├── pages/
-│   ├── FoodEntries/   "My day" — own entries, date filter, log/edit/delete
-│   ├── Admin/          All-entries CRUD table + Reports dashboard
+│   ├── SignIn/          Token-paste "sign in" (not a real login/signup)
+│   ├── FoodEntries/     "My day" — own entries, date filter, log/edit/delete
+│   ├── Admin/           All-entries CRUD table + Reports dashboard
 ├── hooks/       useCurrentUser, useDebouncedValue
 ├── types/       shared API types
 └── theme.ts     MUI theme (indigo accent, rounded cards, soft shadows)

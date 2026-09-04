@@ -1,17 +1,19 @@
 import BoltIcon from "@mui/icons-material/Bolt";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import ShieldPersonIcon from "@mui/icons-material/Shield";
+import LogoutIcon from "@mui/icons-material/Logout";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import { Box, ButtonBase, Paper, Stack, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { User } from "../types";
 
 interface SidebarProps {
   currentUser: User | null;
+  onSignOut: () => void;
 }
 
-export function Sidebar({ currentUser }: SidebarProps) {
+export function Sidebar({ currentUser, onSignOut }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = currentUser?.role === "admin";
@@ -93,22 +95,31 @@ export function Sidebar({ currentUser }: SidebarProps) {
 
         <Box sx={{ mt: "auto" }}>
           <Box sx={{ p: 1.75, borderRadius: "18px", bgcolor: "#f5f6fa", border: "1px solid rgba(23,26,40,0.05)" }}>
-            <Typography
-              fontSize={11}
-              fontWeight={700}
-              letterSpacing={0.8}
-              textTransform="uppercase"
-              color="text.secondary"
-            >
-              Signed in as
-            </Typography>
-            <Typography fontWeight={700} fontSize={14} sx={{ mt: 0.75 }}>
-              {currentUser ? currentUser.name : "—"}
-            </Typography>
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  fontSize={11}
+                  fontWeight={700}
+                  letterSpacing={0.8}
+                  textTransform="uppercase"
+                  color="text.secondary"
+                >
+                  Signed in as
+                </Typography>
+                <Typography fontWeight={700} fontSize={14} sx={{ mt: 0.75 }} noWrap>
+                  {currentUser ? currentUser.name : "—"}
+                </Typography>
+              </Box>
+              <Tooltip title="Sign out">
+                <IconButton size="small" onClick={onSignOut} sx={{ borderRadius: "10px" }}>
+                  <LogoutIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Stack direction="row" alignItems="center" gap={0.75} sx={{ mt: 1, overflow: "hidden" }}>
-              <VpnKeyIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-              <Typography fontFamily="Roboto Mono, monospace" fontSize={10.5} color="text.secondary" noWrap>
-                {currentUser?.role === "admin" ? "admin token" : "user token"}
+              <ShieldPersonIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+              <Typography fontSize={10.5} fontWeight={700} letterSpacing={0.4} textTransform="uppercase" color="text.secondary" noWrap>
+                {currentUser?.role ?? "—"}
               </Typography>
             </Stack>
           </Box>

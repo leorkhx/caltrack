@@ -15,14 +15,14 @@ A calorie-tracking app.
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+# create backend/.env (git-ignored) — see backend/README.md for required vars
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 # Swagger UI: http://localhost:8000/docs
 
 # Terminal 2 — frontend
 cd frontend
-cp .env.example .env
+# create frontend/.env (git-ignored) — see frontend/README.md
 pnpm install
 pnpm dev
 # App: http://localhost:3000

@@ -12,11 +12,21 @@ pip install -r requirements.txt
 # Only if you point DATABASE_URL at Postgres/Supabase:
 # pip install -r requirements-postgres.txt
 
-cp .env.example .env           # edit tokens/limits/DB URL as needed
-
-alembic upgrade head           # create tables
+alembic upgrade head           # create tables (backend/.env already has working defaults)
 
 uvicorn app.main:app --reload --port 8000
+```
+
+`backend/.env` is git-ignored, so on a fresh clone create it yourself with:
+
+```
+DATABASE_URL=sqlite:///./app.db
+USER_TOKEN=user-token-luiza
+USER2_TOKEN=user-token-marco
+ADMIN_TOKEN=admin-token-super-secret
+FDC_API_KEY=DEMO_KEY
+DEFAULT_DAILY_LIMIT=2100
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
 Swagger UI: http://localhost:8000/docs.
