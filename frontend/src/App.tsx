@@ -21,9 +21,15 @@ interface AppShellProps {
 
 function AppShell({ user, loading, onSignOut, children }: AppShellProps) {
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, minHeight: "100vh" }}>
       <Sidebar currentUser={user} onSignOut={onSignOut} />
-      <Box sx={{ flex: 1, minWidth: 0, p: "34px 40px 90px 24px", maxWidth: 1240 }}>
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          p: { xs: "20px 16px 48px", sm: "28px 28px 64px", md: "34px 40px 90px 24px" },
+        }}
+      >
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", pt: 10 }}>
             <CircularProgress />

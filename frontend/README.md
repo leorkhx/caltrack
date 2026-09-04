@@ -1,4 +1,4 @@
-# Calorie Tracker — Frontend
+# CalTrack — Frontend
 
 React + TypeScript + Material UI (v7), Vite, React Router.
 
@@ -14,6 +14,7 @@ pnpm dev                  # http://localhost:3000
 
 ```
 VITE_API_BASE_URL=http://localhost:8000
+VITE_APP_NAME=CalTrack
 ```
 
 The backend must be running on http://localhost:8000 (see `../backend/README.md`).
@@ -21,11 +22,13 @@ The backend must be running on http://localhost:8000 (see `../backend/README.md`
 ## Auth
 
 There is no signup — per the assignment, auth is a predefined per-user bearer
-token, not a real account system. The sign-in page (`pages/SignIn`) is just a
-thin UI over that: paste a token, it's validated against `GET /api/users/me`,
-and stored in `localStorage` (`auth/accounts.ts`) so it's attached to every
-API request. To demo a different user or role, sign out (bottom of the
-sidebar) and sign back in with a different token — the backend is the actual
+token, not a real account system. The sign-in page (`pages/SignIn`) *looks*
+like a normal username/password login, but the "password" field's value is
+literally the bearer token (the user's `email` is the "username"). On submit
+it's validated against `GET /api/users/me`, checked against the entered
+username, and stored in `localStorage` (`auth/accounts.ts`) so it's attached
+to every API request. To demo a different user or role, sign out (bottom of
+the sidebar) and sign back in with different credentials — the backend is the actual
 authority on who's allowed to see what, a non-admin token still gets a 403
 from `/api/admin/*` regardless of what the frontend shows.
 

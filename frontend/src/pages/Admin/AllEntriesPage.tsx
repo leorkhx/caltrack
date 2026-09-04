@@ -217,12 +217,13 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
       {error && <Alert severity="error">{error}</Alert>}
 
       {!loading && !error && (
-        <Card sx={{ p: 1.5 }}>
+        <Card sx={{ p: 1.5, overflowX: "auto" }}>
           {entries.length === 0 && (
             <Typography sx={{ p: 4, textAlign: "center" }} color="text.secondary">
               No entries match these filters.
             </Typography>
           )}
+          <Box sx={{ minWidth: 640 }}>
           {entries.map((entry) => {
             const dayTotal = computeExistingTotal(entry.user_id, entry.consumed_at.slice(0, 10), null);
             const over = dayTotal > entry.user_daily_limit;
@@ -254,6 +255,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
               />
             );
           })}
+          </Box>
           <Stack
             direction="row"
             alignItems="center"

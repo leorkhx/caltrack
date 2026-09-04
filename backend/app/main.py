@@ -7,7 +7,7 @@ from app.config import get_settings
 settings = get_settings()
 
 app = FastAPI(
-    title="Calorie Tracker API",
+    title=f"{settings.app_name} API",
     description="Backend for the calorie tracking demo application.",
     version="1.0.0",
 )

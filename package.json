@@ -1,8 +1,8 @@
 {
-  "name": "calorie-tracker",
+  "name": "bitewise",
   "private": true,
   "version": "1.0.0",
-  "description": "Root scripts to run backend + frontend together for local dev/demo. See README.md for first-time setup (venv, alembic, seed, pnpm install) before using dev:all.",
+  "description": "Root scripts to run backend + frontend together for local dev/demo. See README.md for first-time setup (venv, alembic, pnpm install) before using dev:all.",
   "scripts": {
     "dev:backend": "bash backend/dev.sh",
     "dev:frontend": "pnpm --dir frontend dev",

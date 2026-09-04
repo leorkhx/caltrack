@@ -13,6 +13,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    app_name: str = "CalTrack"
+
     database_url: str = "sqlite:///./app.db"
 
     user_token: str = "user-token-luiza"

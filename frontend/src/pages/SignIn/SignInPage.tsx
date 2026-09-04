@@ -1,37 +1,61 @@
 import { useState } from "react";
-import { Alert, Box, Button, Card, Stack, TextField, Typography } from "@mui/material";
-import BoltIcon from "@mui/icons-material/Bolt";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  IconButton,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import LocalDiningIcon from "@mui/icons-material/LocalDining";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { fetchMe } from "../../api/users";
-import { setActiveToken } from "../../auth/accounts";
+import { clearActiveToken, setActiveToken } from "../../auth/accounts";
+import { APP_NAME } from "../../appName";
 
 interface SignInPageProps {
   onSignedIn: () => void;
 }
 
 /**
- * Not a real login: there is no signup, no password, no server session.
- * This just lets you paste one of the backend's predefined bearer tokens
- * (USER_TOKEN / USER2_TOKEN / ADMIN_TOKEN) instead of editing an env var.
- * The token is validated by calling /api/users/me before being stored.
+ * Looks like a normal username/password login, but there is no signup and
+ * no server session underneath — per the assignment, auth is a predefined
+ * per-user bearer token (see backend/.env). The password field's value is
+ * that token; "username" is just the account's email, checked against what
+ * the token actually resolves to so a mismatched pair reads as invalid
+ * credentials rather than exposing which field was wrong.
  */
 export function SignInPage({ onSignedIn }: SignInPageProps) {
-  const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = token.trim();
-    if (!trimmed) return;
+    const email = username.trim().toLowerCase();
+    const token = password.trim();
+    if (!email || !token) return;
     setSubmitting(true);
     setError(null);
-    setActiveToken(trimmed);
+    setActiveToken(token);
     try {
-      await fetchMe();
+      const me = await fetchMe();
+      if (me.email.toLowerCase() !== email) {
+        clearActiveToken();
+        setError("Invalid username or password.");
+        return;
+      }
       onSignedIn();
     } catch {
-      setError("That token isn't recognized. Check it against backend/.env and try again.");
+      clearActiveToken();
+      setError("Invalid username or password.");
     } finally {
       setSubmitting(false);
     }
@@ -53,40 +77,67 @@ export function SignInPage({ onSignedIn }: SignInPageProps) {
               boxShadow: "0 8px 18px -8px rgba(79,79,208,0.8)",
             }}
           >
-            <BoltIcon fontSize="large" />
+            <LocalDiningIcon fontSize="large" />
           </Box>
           <Typography fontSize={22} fontWeight={800} letterSpacing={-0.4}>
-            Sign in to Kcal
+            Sign in to {APP_NAME}
           </Typography>
           <Typography fontSize={13.5} color="text.secondary" textAlign="center">
-            Paste your predefined bearer token below. No signup — tokens are
-            issued and changed on the backend.
+            Enter your account details to continue.
           </Typography>
         </Stack>
 
         <form onSubmit={handleSubmit}>
           <Stack gap={2}>
             <TextField
-              label="Bearer token"
-              placeholder="user-token-luiza"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+              label="Username"
+              placeholder="you@example.com"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               autoFocus
               fullWidth
+              autoComplete="username"
               slotProps={{
                 input: {
-                  startAdornment: <VpnKeyIcon sx={{ mr: 1, fontSize: 20, color: "text.secondary" }} />,
+                  startAdornment: <PersonOutlineIcon sx={{ mr: 1, fontSize: 20, color: "text.secondary" }} />,
                 },
               }}
-              sx={{ "& input": { fontFamily: "Roboto Mono, monospace", fontSize: 14 } }}
+            />
+            <TextField
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              autoComplete="current-password"
+              slotProps={{
+                input: {
+                  startAdornment: <LockOutlinedIcon sx={{ mr: 1, fontSize: 20, color: "text.secondary" }} />,
+                  endAdornment: (
+                    <IconButton
+                      size="small"
+                      onClick={() => setShowPassword((v) => !v)}
+                      edge="end"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                    </IconButton>
+                  ),
+                },
+              }}
             />
             {error && (
               <Alert severity="error" sx={{ borderRadius: "14px" }}>
                 {error}
               </Alert>
             )}
-            <Button type="submit" variant="contained" size="large" disabled={submitting || !token.trim()}>
-              {submitting ? "Checking…" : "Sign in"}
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={submitting || !username.trim() || !password.trim()}
+            >
+              {submitting ? "Signing in…" : "Sign in"}
             </Button>
           </Stack>
         </form>

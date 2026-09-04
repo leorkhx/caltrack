@@ -1,6 +1,9 @@
-# Calorie Tracker
+# CalTrack
 
-A calorie-tracking app.
+A calorie-tracking app. "CalTrack" is
+just the default display name — it's set via `APP_NAME` (backend) and
+`VITE_APP_NAME` (frontend) env vars, so rebranding is a one-line edit, no code
+changes.
 
 - **Backend**: FastAPI + SQLAlchemy + Alembic + Pydantic v2, REST API, Swagger docs.
 - **Frontend**: React + TypeScript + Material UI, Vite, React Router.

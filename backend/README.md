@@ -1,4 +1,4 @@
-# Calorie Tracker — Backend
+# CalTrack — Backend
 
 FastAPI + SQLAlchemy + Alembic + Pydantic v2 REST API.
 
@@ -20,6 +20,7 @@ uvicorn app.main:app --reload --port 8000
 `backend/.env` is git-ignored, so on a fresh clone create it yourself with:
 
 ```
+APP_NAME=CalTrack
 DATABASE_URL=sqlite:///./app.db
 USER_TOKEN=user-token-luiza
 USER2_TOKEN=user-token-marco
