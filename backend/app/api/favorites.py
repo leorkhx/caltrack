@@ -5,7 +5,7 @@ from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.favorite_food import FavoriteFood
 from app.models.user import User
-from app.schemas.favorite_food import FavoriteFoodCreate, FavoriteFoodOut
+from app.schemas.favorite_food import FavoriteFoodCreate, FavoriteFoodOut, FavoriteFoodUpdate
 
 router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
@@ -33,12 +33,7 @@ def create_favorite(
     return favorite
 
 
-@router.delete("/{favorite_id}", status_code=204)
-def delete_favorite(
-    favorite_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def _get_owned_favorite(db: Session, favorite_id: int, current_user: User) -> FavoriteFood:
     favorite = (
         db.query(FavoriteFood)
         .filter(FavoriteFood.id == favorite_id, FavoriteFood.user_id == current_user.id)
@@ -46,6 +41,32 @@ def delete_favorite(
     )
     if favorite is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found.")
+    return favorite
+
+
+@router.put("/{favorite_id}", response_model=FavoriteFoodOut)
+@router.patch("/{favorite_id}", response_model=FavoriteFoodOut)
+def update_favorite(
+    favorite_id: int,
+    payload: FavoriteFoodUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    favorite = _get_owned_favorite(db, favorite_id, current_user)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(favorite, field, value)
+    db.commit()
+    db.refresh(favorite)
+    return favorite
+
+
+@router.delete("/{favorite_id}", status_code=204)
+def delete_favorite(
+    favorite_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    favorite = _get_owned_favorite(db, favorite_id, current_user)
     db.delete(favorite)
     db.commit()
     return None

@@ -25,6 +25,25 @@ class FavoriteFoodCreate(BaseModel):
         return v
 
 
+class FavoriteFoodUpdate(BaseModel):
+    food_name: Optional[str] = Field(None, min_length=MIN_NAME_LEN, max_length=200)
+    calories: Optional[int] = Field(None, gt=0, le=MAX_CALORIES)
+    protein_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    carbs_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    fat_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    from_fdc: Optional[bool] = None
+
+    @field_validator("food_name")
+    @classmethod
+    def name_not_blank(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if len(v) < MIN_NAME_LEN:
+            raise ValueError(f"Food name must be at least {MIN_NAME_LEN} characters.")
+        return v
+
+
 class FavoriteFoodOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

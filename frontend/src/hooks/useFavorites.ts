@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFavorite, deleteFavorite, fetchFavorites } from "../api/favorites";
+import { createFavorite, deleteFavorite, fetchFavorites, updateFavorite } from "../api/favorites";
 import { queryKeys } from "../api/queryClient";
 import type { FavoriteFoodInput } from "../types";
 
@@ -18,10 +18,14 @@ export function useFavoriteMutations() {
     mutationFn: (input: FavoriteFoodInput) => createFavorite(input),
     onSuccess: invalidate,
   });
+  const update = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: Partial<FavoriteFoodInput> }) => updateFavorite(id, input),
+    onSuccess: invalidate,
+  });
   const remove = useMutation({
     mutationFn: (id: number) => deleteFavorite(id),
     onSuccess: invalidate,
   });
 
-  return { create, remove };
+  return { create, update, remove };
 }

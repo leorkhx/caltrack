@@ -1,13 +1,18 @@
-import { Box, IconButton, Stack, Typography, Chip } from "@mui/material";
+import { useState } from "react";
+import { Box, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography, Chip } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import LunchDiningIcon from "@mui/icons-material/LunchDining";
 import DinnerDiningIcon from "@mui/icons-material/DinnerDining";
 import CookieIcon from "@mui/icons-material/Cookie";
-import { MiniMacroRing } from "./MiniMacroRing";
+import { MiniMacroBar } from "./MiniMacroBar";
+import { useFavoriteMutations, useFavorites } from "../hooks/useFavorites";
 import type { FoodEntry, MealType } from "../types";
 
 interface EntryRowProps {
@@ -34,6 +39,14 @@ const MEAL_LABELS: Record<MealType, string> = {
 export function EntryRow({ entry, onEdit, onDelete, rightExtra }: EntryRowProps) {
   const time = new Date(entry.consumed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const hasMacros = entry.protein_g !== null || entry.carbs_g !== null || entry.fat_g !== null;
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const { data: favorites = [] } = useFavorites();
+  const { create: createFavorite, remove: removeFavorite } = useFavoriteMutations();
+  const matchingFavorite = favorites.find(
+    (f) => f.food_name.toLowerCase() === entry.food_name.trim().toLowerCase()
+  );
+
+  const closeMenu = () => setMenuAnchor(null);
 
   return (
     <Stack
@@ -81,7 +94,7 @@ export function EntryRow({ entry, onEdit, onDelete, rightExtra }: EntryRowProps)
         </Stack>
         {hasMacros && (
           <Box sx={{ mt: 0.5 }}>
-            <MiniMacroRing proteinG={entry.protein_g ?? 0} carbsG={entry.carbs_g ?? 0} fatG={entry.fat_g ?? 0} />
+            <MiniMacroBar proteinG={entry.protein_g ?? 0} carbsG={entry.carbs_g ?? 0} fatG={entry.fat_g ?? 0} />
           </Box>
         )}
       </Box>
@@ -94,16 +107,64 @@ export function EntryRow({ entry, onEdit, onDelete, rightExtra }: EntryRowProps)
       >
         {entry.calories}
       </Typography>
-      <IconButton size="small" onClick={onEdit} sx={{ border: "1px solid rgba(23,26,40,0.06)", borderRadius: "13px" }}>
-        <EditIcon fontSize="small" />
-      </IconButton>
       <IconButton
         size="small"
-        onClick={onDelete}
-        sx={{ border: "1px solid rgba(23,26,40,0.06)", borderRadius: "13px", "&:hover": { color: "error.main" } }}
+        onClick={(e) => setMenuAnchor(e.currentTarget)}
+        sx={{ border: "1px solid rgba(23,26,40,0.06)", borderRadius: "13px" }}
       >
-        <DeleteIcon fontSize="small" />
+        <MoreVertIcon fontSize="small" />
       </IconButton>
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+        <MenuItem
+          onClick={() => {
+            onEdit();
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (matchingFavorite) {
+              removeFavorite.mutate(matchingFavorite.id);
+            } else {
+              createFavorite.mutate({
+                food_name: entry.food_name,
+                calories: entry.calories,
+                protein_g: entry.protein_g,
+                carbs_g: entry.carbs_g,
+                fat_g: entry.fat_g,
+                from_fdc: entry.from_fdc,
+              });
+            }
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            {matchingFavorite ? (
+              <StarIcon fontSize="small" sx={{ color: "#d98a0f" }} />
+            ) : (
+              <StarBorderIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>{matchingFavorite ? "Remove from favorites" : "Add to favorites"}</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            onDelete();
+            closeMenu();
+          }}
+          sx={{ color: "error.main" }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
     </Stack>
   );
 }
