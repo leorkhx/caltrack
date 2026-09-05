@@ -3,13 +3,20 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.models.food_entry import MealType
+
 MAX_CALORIES = 5000
 MIN_NAME_LEN = 2
+MAX_MACRO_GRAMS = 1000
 
 
 class FoodEntryBase(BaseModel):
     food_name: str = Field(..., min_length=MIN_NAME_LEN, max_length=200)
     calories: int = Field(..., gt=0, le=MAX_CALORIES)
+    meal_type: MealType = MealType.snack
+    protein_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    carbs_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    fat_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     consumed_at: datetime
     from_fdc: bool = False
 
@@ -43,6 +50,10 @@ class AdminFoodEntryCreate(FoodEntryBase):
 class FoodEntryUpdate(BaseModel):
     food_name: Optional[str] = Field(None, min_length=MIN_NAME_LEN, max_length=200)
     calories: Optional[int] = Field(None, gt=0, le=MAX_CALORIES)
+    meal_type: Optional[MealType] = None
+    protein_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    carbs_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
+    fat_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     consumed_at: Optional[datetime] = None
     from_fdc: Optional[bool] = None
     user_id: Optional[int] = None  # only honored for admin updates
@@ -76,6 +87,10 @@ class FoodEntryOut(BaseModel):
     user_id: int
     food_name: str
     calories: int
+    meal_type: MealType
+    protein_g: Optional[int] = None
+    carbs_g: Optional[int] = None
+    fat_g: Optional[int] = None
     consumed_at: datetime
     from_fdc: bool
     created_at: datetime

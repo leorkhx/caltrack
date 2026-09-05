@@ -66,6 +66,16 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
     limitError || proteinError || carbsError || fatError || heightError || weightError || ageError
   );
 
+  const isDirty =
+    dailyLimit !== toText(currentUser.daily_calorie_limit) ||
+    protein !== toText(currentUser.protein_target_g) ||
+    carbs !== toText(currentUser.carbs_target_g) ||
+    fat !== toText(currentUser.fat_target_g) ||
+    height !== toText(currentUser.height_cm) ||
+    weight !== toText(currentUser.weight_kg) ||
+    age !== toText(currentUser.age) ||
+    sex !== (currentUser.sex ?? "");
+
   const applyPreset = (presetId: string) => {
     setDietPreset(presetId);
     const preset = DIET_PRESETS.find((p) => p.id === presetId);
@@ -319,7 +329,7 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
         </Alert>
       )}
 
-      <Button variant="contained" size="large" onClick={handleSave} disabled={isPending} sx={{ mt: 2.5, px: 3 }}>
+      <Button variant="contained" size="large" onClick={handleSave} disabled={isPending || !isDirty} sx={{ mt: 2.5, px: 3 }}>
         {isPending ? "Saving…" : "Save changes"}
       </Button>
     </Box>

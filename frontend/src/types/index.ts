@@ -1,5 +1,6 @@
 export type UserRole = "user" | "admin";
 export type BiologicalSex = "male" | "female";
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface User {
   id: number;
@@ -33,6 +34,10 @@ export interface FoodEntry {
   user_id: number;
   food_name: string;
   calories: number;
+  meal_type: MealType;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
   consumed_at: string; // ISO datetime
   from_fdc: boolean;
   created_at: string;
@@ -55,6 +60,10 @@ export interface PaginatedAdminFoodEntries {
 export interface FoodEntryInput {
   food_name: string;
   calories: number;
+  meal_type: MealType;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
   consumed_at: string;
   from_fdc: boolean;
   user_id?: number;
@@ -63,6 +72,9 @@ export interface FoodEntryInput {
 export interface FdcSearchResult {
   name: string;
   calories: number;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
   meta?: Record<string, unknown>;
 }
 

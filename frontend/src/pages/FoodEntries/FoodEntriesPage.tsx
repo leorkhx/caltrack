@@ -4,7 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import NoMealsIcon from "@mui/icons-material/NoMeals";
 import { CalorieRing } from "../../components/CalorieRing";
 import { StatCard } from "../../components/StatCard";
-import { FiltersBar } from "../../components/FiltersBar";
+import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
@@ -16,12 +16,18 @@ import { todayIso } from "../../utils/validation";
 function isoDaysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function dateKey(iso: string): string {
   return iso.slice(0, 10);
 }
+
+const QUICK_RANGES = [
+  { label: "7d", days: 7 },
+  { label: "14d", days: 14 },
+  { label: "Custom", days: null },
+];
 
 interface FoodEntriesPageProps {
   currentUser: User;
@@ -33,6 +39,18 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
   const [rangeDays, setRangeDays] = useState<number | null>(7);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FoodEntry | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterOptions, setFilterOptions] = useState<EntryFilterOption[]>(["all"]);
+  const [sortMode, setSortMode] = useState<EntrySortMode>("date_desc");
+
+  const toggleFilterOption = (option: EntryFilterOption) => {
+    setFilterOptions((prev) => {
+      if (option === "all") return ["all"];
+      const withoutAll = prev.filter((o) => o !== "all");
+      const next = withoutAll.includes(option) ? withoutAll.filter((o) => o !== option) : [...withoutAll, option];
+      return next.length === 0 ? ["all"] : next;
+    });
+  };
 
   const { data: entries = [], isLoading: loading } = useMyEntries({
     date_from: dateFrom || undefined,
@@ -66,16 +84,20 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
   const overCount = week.filter((w) => w.total > limit).length;
 
   const dayGroups = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filteredEntries = query ? entries.filter((e) => e.food_name.toLowerCase().includes(query)) : entries;
+
     const byDay: Record<string, FoodEntry[]> = {};
-    entries.forEach((e) => {
+    filteredEntries.forEach((e) => {
       const key = dateKey(e.consumed_at);
       (byDay[key] = byDay[key] || []).push(e);
     });
-    return Object.keys(byDay)
+
+    let groups = Object.keys(byDay)
       .sort()
       .reverse()
       .map((date) => {
-        const list = byDay[date].sort((a, b) => (a.consumed_at < b.consumed_at ? 1 : -1));
+        const list = [...byDay[date]].sort((a, b) => (a.consumed_at < b.consumed_at ? 1 : -1));
         const total = list.reduce((a, e) => a + e.calories, 0);
         const over = total > limit;
         const d = new Date(`${date}T00:00:00`);
@@ -85,9 +107,32 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
             : date === isoDaysAgo(1)
               ? "Yesterday"
               : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-        return { date, list, total, over, label };
+        const hasMacros = list.some((e) => e.protein_g !== null || e.carbs_g !== null || e.fat_g !== null);
+        const macroTotals = hasMacros
+          ? {
+              protein: list.reduce((a, e) => a + (e.protein_g ?? 0), 0),
+              carbs: list.reduce((a, e) => a + (e.carbs_g ?? 0), 0),
+              fat: list.reduce((a, e) => a + (e.fat_g ?? 0), 0),
+            }
+          : null;
+        return { date, list, total, over, label, macroTotals };
       });
-  }, [entries, limit, today]);
+
+    if (!filterOptions.includes("all")) {
+      groups = groups.filter((g) => (filterOptions.includes("over") && g.over) || (filterOptions.includes("within") && !g.over));
+    }
+
+    if (sortMode === "date_asc") {
+      groups = [...groups].reverse();
+    } else if (sortMode === "calories_desc" || sortMode === "calories_asc") {
+      groups = groups.map((g) => ({
+        ...g,
+        list: [...g.list].sort((a, b) => (sortMode === "calories_desc" ? b.calories - a.calories : a.calories - b.calories)),
+      }));
+    }
+
+    return groups;
+  }, [entries, limit, today, search, filterOptions, sortMode]);
 
   const computeExistingTotal = useCallback(
     (_userId: number, dateIso: string, excludeEntryId: number | null) => {
@@ -174,7 +219,7 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
         />
       </Box>
 
-      <FiltersBar
+      <DashboardFilterNav
         dateFrom={dateFrom}
         dateTo={dateTo}
         onDateFromChange={(v) => {
@@ -187,6 +232,13 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
         }}
         onQuickRange={setQuickRange}
         activeRangeDays={rangeDays}
+        quickRanges={QUICK_RANGES}
+        searchValue={search}
+        onSearchChange={setSearch}
+        filterOptions={filterOptions}
+        onToggleFilterOption={toggleFilterOption}
+        sortMode={sortMode}
+        onSortModeChange={setSortMode}
       />
 
       {loading ? (
@@ -252,6 +304,22 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
                 }}
               />
             </Box>
+            {group.macroTotals && (
+              <Stack direction="row" gap={2} sx={{ px: 3, pt: 1.5 }}>
+                <Typography fontSize={12} fontWeight={600} color="text.secondary">
+                  Protein {group.macroTotals.protein}g
+                  {currentUser.protein_target_g ? ` / ${currentUser.protein_target_g}g` : ""}
+                </Typography>
+                <Typography fontSize={12} fontWeight={600} color="text.secondary">
+                  Carbs {group.macroTotals.carbs}g
+                  {currentUser.carbs_target_g ? ` / ${currentUser.carbs_target_g}g` : ""}
+                </Typography>
+                <Typography fontSize={12} fontWeight={600} color="text.secondary">
+                  Fat {group.macroTotals.fat}g
+                  {currentUser.fat_target_g ? ` / ${currentUser.fat_target_g}g` : ""}
+                </Typography>
+              </Stack>
+            )}
             <Stack sx={{ p: "14px" }}>
               {group.list.map((entry) => (
                 <EntryRow

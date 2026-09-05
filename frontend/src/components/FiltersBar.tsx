@@ -65,7 +65,14 @@ export function FiltersBar({
           onChange={(value: Dayjs | null) => onDateFromChange(value ? value.format("YYYY-MM-DD") : "")}
           maxDate={dayjs()}
           slotProps={{
-            textField: { variant: "standard", sx: { width: 132 }},
+            textField: {
+              variant: "standard",
+              sx: {
+                width: 150,
+                "& .MuiInputBase-root": { fontSize: 13.5, fontWeight: 600 },
+                "& .MuiPickersSectionList-sectionContent": { fontSize: 13.5, fontWeight: 600 },
+              },
+            },
           }}
         />
         <span style={{ color: "#c3c7d4", fontWeight: 700 }}>-</span>
@@ -74,7 +81,14 @@ export function FiltersBar({
           onChange={(value: Dayjs | null) => onDateToChange(value ? value.format("YYYY-MM-DD") : "")}
           maxDate={dayjs()}
           slotProps={{
-            textField: { variant: "standard", sx: { width: 132 }},
+            textField: {
+              variant: "standard",
+              sx: {
+                width: 150,
+                "& .MuiInputBase-root": { fontSize: 13.5, fontWeight: 600 },
+                "& .MuiPickersSectionList-sectionContent": { fontSize: 13.5, fontWeight: 600 },
+              },
+            },
           }}
         />
       </Stack>

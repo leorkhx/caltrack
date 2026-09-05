@@ -11,6 +11,9 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 ENERGY_NUTRIENT_NUMBER = "208"  # kcal, per USDA FDC nutrient dictionary
+PROTEIN_NUTRIENT_NUMBER = "203"  # g
+FAT_NUTRIENT_NUMBER = "204"  # g, "Total lipid (fat)"
+CARBS_NUTRIENT_NUMBER = "205"  # g, "Carbohydrate, by difference"
 
 # USDA's FDC API is flaky under its own rate limiting: the same request can
 # alternate between 200 and a bare 400/429/5xx from one call to the next with
@@ -32,6 +35,16 @@ def _extract_calories(food: dict[str, Any]) -> float | None:
                 continue
             if unit in ("kcal", ""):
                 return float(value)
+    return None
+
+
+def _extract_nutrient_grams(food: dict[str, Any], number: str) -> int | None:
+    for nutrient in food.get("foodNutrients", []):
+        if str(nutrient.get("nutrientNumber") or "") == number:
+            value = nutrient.get("value")
+            if value is None:
+                continue
+            return round(float(value))
     return None
 
 
@@ -87,6 +100,9 @@ async def search_foods(query: str, page_size: int = 10) -> list[dict[str, Any]]:
             {
                 "name": food.get("description", "").title(),
                 "calories": round(calories),
+                "protein_g": _extract_nutrient_grams(food, PROTEIN_NUTRIENT_NUMBER),
+                "carbs_g": _extract_nutrient_grams(food, CARBS_NUTRIENT_NUMBER),
+                "fat_g": _extract_nutrient_grams(food, FAT_NUTRIENT_NUMBER),
                 "meta": {
                     "fdcId": food.get("fdcId"),
                     "dataType": food.get("dataType"),

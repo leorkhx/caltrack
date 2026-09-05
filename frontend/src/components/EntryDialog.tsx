@@ -20,7 +20,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { searchFoods } from "../api/foods";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { validateEntryForm, hasErrors, type EntryFormErrors } from "../utils/validation";
-import type { FdcSearchResult, FoodEntry, FoodEntryInput, User } from "../types";
+import type { FdcSearchResult, FoodEntry, FoodEntryInput, MealType, User } from "../types";
 
 interface EntryDialogProps {
   open: boolean;
@@ -34,6 +34,13 @@ interface EntryDialogProps {
   computeExistingTotal: (userId: number, dateIso: string, excludeEntryId: number | null) => number;
 }
 
+const MEAL_TYPES: { value: MealType; label: string }[] = [
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snack", label: "Snack" },
+];
+
 function toDateInput(iso: string): string {
   return iso.slice(0, 10);
 }
@@ -42,10 +49,21 @@ function toTimeInput(iso: string): string {
   return d.toTimeString().slice(0, 5);
 }
 function nowDate(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 function nowTime(): string {
   return new Date().toTimeString().slice(0, 5);
+}
+function defaultMealType(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 18) return "snack";
+  return "dinner";
+}
+function digitsOnly(value: string): string {
+  return value.replace(/[^\d]/g, "");
 }
 
 export function EntryDialog({
@@ -64,6 +82,10 @@ export function EntryDialog({
   const [userId, setUserId] = useState<number>(currentUserId);
   const [foodName, setFoodName] = useState("");
   const [caloriesText, setCaloriesText] = useState("");
+  const [mealType, setMealType] = useState<MealType>("snack");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
   const [date, setDate] = useState(nowDate());
   const [time, setTime] = useState(nowTime());
   const [fromFdc, setFromFdc] = useState(false);
@@ -81,6 +103,10 @@ export function EntryDialog({
       setUserId(initialEntry.user_id);
       setFoodName(initialEntry.food_name);
       setCaloriesText(String(initialEntry.calories));
+      setMealType(initialEntry.meal_type);
+      setProtein(initialEntry.protein_g === null ? "" : String(initialEntry.protein_g));
+      setCarbs(initialEntry.carbs_g === null ? "" : String(initialEntry.carbs_g));
+      setFat(initialEntry.fat_g === null ? "" : String(initialEntry.fat_g));
       setDate(toDateInput(initialEntry.consumed_at));
       setTime(toTimeInput(initialEntry.consumed_at));
       setFromFdc(initialEntry.from_fdc);
@@ -88,6 +114,10 @@ export function EntryDialog({
       setUserId(currentUserId);
       setFoodName("");
       setCaloriesText("");
+      setMealType(defaultMealType());
+      setProtein("");
+      setCarbs("");
+      setFat("");
       setDate(nowDate());
       setTime(nowTime());
       setFromFdc(false);
@@ -141,6 +171,10 @@ export function EntryDialog({
       const input: FoodEntryInput = {
         food_name: foodName.trim(),
         calories: Number(caloriesText),
+        meal_type: mealType,
+        protein_g: protein === "" ? null : Number(protein),
+        carbs_g: carbs === "" ? null : Number(carbs),
+        fat_g: fat === "" ? null : Number(fat),
         consumed_at: consumedAt.toISOString(),
         from_fdc: fromFdc,
         ...(isAdmin ? { user_id: userId } : {}),
@@ -230,6 +264,14 @@ export function EntryDialog({
             />
           </Stack>
 
+          <TextField select label="Meal" value={mealType} onChange={(e) => setMealType(e.target.value as MealType)} fullWidth>
+            {MEAL_TYPES.map((m) => (
+              <MenuItem key={m.value} value={m.value}>
+                {m.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
           <Autocomplete
             freeSolo
             options={fdcOptions}
@@ -245,6 +287,9 @@ export function EntryDialog({
               if (value && typeof value !== "string") {
                 setFoodName(value.name);
                 setCaloriesText(String(value.calories));
+                setProtein(value.protein_g != null ? String(value.protein_g) : "");
+                setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
+                setFat(value.fat_g != null ? String(value.fat_g) : "");
                 setFromFdc(true);
               }
             }}
@@ -288,6 +333,33 @@ export function EntryDialog({
             helperText={touched && errors.calories}
             fullWidth
           />
+
+          <Stack direction="row" gap={1.5}>
+            <TextField
+              label="Protein"
+              value={protein}
+              onChange={(e) => setProtein(digitsOnly(e.target.value))}
+              placeholder="optional"
+              sx={{ flex: 1 }}
+              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+            />
+            <TextField
+              label="Carbs"
+              value={carbs}
+              onChange={(e) => setCarbs(digitsOnly(e.target.value))}
+              placeholder="optional"
+              sx={{ flex: 1 }}
+              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+            />
+            <TextField
+              label="Fat"
+              value={fat}
+              onChange={(e) => setFat(digitsOnly(e.target.value))}
+              placeholder="optional"
+              sx={{ flex: 1 }}
+              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+            />
+          </Stack>
 
           {willExceedLimit && (
             <Alert severity="warning" sx={{ borderRadius: "14px" }}>
