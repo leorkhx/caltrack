@@ -93,20 +93,7 @@ app/
 ├── services/             business logic: food_entry_service, report_service, fdc_service
 └── dependencies/auth.py  bearer-token -> User resolution, require_admin
 alembic/                  migrations (initial revision creates users + food_entries)
-tests/                    pytest suite (auth, isolation, admin, validation, report math)
 ```
-
-## Tests
-
-```bash
-pytest -q
-```
-
-27 tests covering: unauthenticated/invalid token rejection (401), per-user data
-isolation (a user can't see/edit/delete another user's entries — 404), admin-only
-endpoints returning 403 for regular users, server-side validation (negative /
-zero / >5000 calories, <2 char names, future dates all rejected with 422), and
-the last-7-days-vs-previous-7-days report date-window boundary math.
 
 ## API surface
 
@@ -123,8 +110,13 @@ except `/health`. See `/docs` for the full interactive schema. Highlights:
   Mifflin-St Jeor, returned on `GET /api/users/me` once all four are set).
   Used by the frontend's Settings page.
 - `GET /api/foods/search?q=` — USDA FDC-backed autocomplete (any authenticated
-  user). Returns `{results: [{name, calories, meta}]}`; returns an empty list
-  (never an error) if FDC is unreachable or the key is rate-limited.
+  user). Returns `{results: [{name, calories, protein_g, carbs_g, fat_g, meta}]}`
+  (macros are best-effort — present when FDC reports them); returns an empty
+  list (never an error) if FDC is unreachable or the key is rate-limited.
+- `GET/POST /api/favorites`, `DELETE /api/favorites/{id}` — the caller's own
+  saved foods (name, calories, optional macros). Surfaced first, starred, in
+  the frontend's food-name autocomplete so a user never has to re-pick the
+  right FDC match (per-100g vs per-serving) for something they log often.
 - Admin-only (403 otherwise, enforced by `require_admin` dependency, not just
   hidden client-side):
   - `GET/POST /api/admin/food-entries`, `PUT|PATCH|DELETE /api/admin/food-entries/{id}`

@@ -11,16 +11,20 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import dayjs, { type Dayjs } from "dayjs";
 import CloseIcon from "@mui/icons-material/Close";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { searchFoods } from "../api/foods";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { useFavorites, useFavoriteMutations } from "../hooks/useFavorites";
 import { validateEntryForm, hasErrors, type EntryFormErrors } from "../utils/validation";
-import type { FdcSearchResult, FoodEntry, FoodEntryInput, MealType, User } from "../types";
+import type { FoodEntry, FoodEntryInput, FoodSuggestion, MealType, User } from "../types";
 
 interface EntryDialogProps {
   open: boolean;
@@ -93,9 +97,15 @@ export function EntryDialog({
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const [fdcOptions, setFdcOptions] = useState<FdcSearchResult[]>([]);
+  const [fdcOptions, setFdcOptions] = useState<FoodSuggestion[]>([]);
   const [fdcLoading, setFdcLoading] = useState(false);
   const debouncedName = useDebouncedValue(foodName, 350);
+
+  const { data: favorites = [] } = useFavorites();
+  const { create: createFavorite } = useFavoriteMutations();
+  const matchingFavoriteId = favorites.find(
+    (f) => f.food_name.toLowerCase() === foodName.trim().toLowerCase()
+  )?.id;
 
   useEffect(() => {
     if (!open) return;
@@ -135,7 +145,18 @@ export function EntryDialog({
     setFdcLoading(true);
     searchFoods(debouncedName)
       .then((results) => {
-        if (!cancelled) setFdcOptions(results);
+        if (!cancelled) {
+          setFdcOptions(
+            results.map((r) => ({
+              source: "fdc" as const,
+              name: r.name,
+              calories: r.calories,
+              protein_g: r.protein_g,
+              carbs_g: r.carbs_g,
+              fat_g: r.fat_g,
+            }))
+          );
+        }
       })
       .catch(() => {
         if (!cancelled) setFdcOptions([]);
@@ -147,6 +168,26 @@ export function EntryDialog({
       cancelled = true;
     };
   }, [debouncedName]);
+
+  const combinedOptions: FoodSuggestion[] = useMemo(() => {
+    const query = debouncedName.trim().toLowerCase();
+    const favoriteMatches: FoodSuggestion[] =
+      query.length < 2
+        ? []
+        : favorites
+            .filter((f) => f.food_name.toLowerCase().includes(query))
+            .map((f) => ({
+              source: "favorite" as const,
+              name: f.food_name,
+              calories: f.calories,
+              protein_g: f.protein_g,
+              carbs_g: f.carbs_g,
+              fat_g: f.fat_g,
+              favoriteId: f.id,
+            }));
+    // Favorites first — the user already vetted these, no need to re-guess among FDC's per-100g vs per-serving values.
+    return [...favoriteMatches, ...fdcOptions];
+  }, [debouncedName, favorites, fdcOptions]);
 
   const errors: EntryFormErrors = useMemo(
     () => validateEntryForm({ foodName, caloriesText, date, time }),
@@ -274,7 +315,7 @@ export function EntryDialog({
 
           <Autocomplete
             freeSolo
-            options={fdcOptions}
+            options={combinedOptions}
             loading={fdcLoading}
             filterOptions={(x) => x}
             getOptionLabel={(opt) => (typeof opt === "string" ? opt : `${opt.name} (${opt.calories} kcal)`)}
@@ -290,21 +331,29 @@ export function EntryDialog({
                 setProtein(value.protein_g != null ? String(value.protein_g) : "");
                 setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
                 setFat(value.fat_g != null ? String(value.fat_g) : "");
-                setFromFdc(true);
+                setFromFdc(value.source === "fdc");
               }
             }}
             renderOption={(props, option) => {
               if (typeof option === "string") return null;
+              const isFavorite = option.source === "favorite";
               return (
-                <li {...props} key={`${option.name}-${option.calories}`}>
-                  <Box>
-                    <Typography fontSize={14} fontWeight={600}>
-                      {option.name}
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary">
-                      {option.calories} kcal
-                    </Typography>
-                  </Box>
+                <li {...props} key={`${option.source}-${option.name}-${option.calories}`}>
+                  <Stack direction="row" alignItems="center" gap={1} sx={{ width: "100%" }}>
+                    {isFavorite ? (
+                      <StarIcon sx={{ fontSize: 16, color: "#d98a0f", flex: "none" }} />
+                    ) : (
+                      <StarBorderIcon sx={{ fontSize: 16, color: "transparent", flex: "none" }} />
+                    )}
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography fontSize={14} fontWeight={600} noWrap>
+                        {option.name}
+                      </Typography>
+                      <Typography fontSize={12} color="text.secondary">
+                        {option.calories} kcal{isFavorite ? " · favorite" : ""}
+                      </Typography>
+                    </Box>
+                  </Stack>
                 </li>
               );
             }}
@@ -312,12 +361,48 @@ export function EntryDialog({
               <TextField
                 {...params}
                 label="Food name"
-                placeholder="Start typing to search USDA FoodData Central..."
+                placeholder="Start typing to search your favorites or USDA FoodData Central..."
                 error={touched && Boolean(errors.foodName)}
                 helperText={
                   (touched && errors.foodName) ||
                   "2+ characters triggers autocomplete. No match? Just type it and enter calories manually."
                 }
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        {foodName.trim().length >= 2 && (
+                          <Tooltip title={matchingFavoriteId ? "Saved in favorites" : "Save as favorite"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={Boolean(matchingFavoriteId) || !caloriesText || createFavorite.isPending}
+                                onClick={() =>
+                                  createFavorite.mutate({
+                                    food_name: foodName.trim(),
+                                    calories: Number(caloriesText) || 0,
+                                    protein_g: protein === "" ? null : Number(protein),
+                                    carbs_g: carbs === "" ? null : Number(carbs),
+                                    fat_g: fat === "" ? null : Number(fat),
+                                    from_fdc: fromFdc,
+                                  })
+                                }
+                              >
+                                {matchingFavoriteId ? (
+                                  <StarIcon sx={{ fontSize: 20, color: "#d98a0f" }} />
+                                ) : (
+                                  <StarBorderIcon sx={{ fontSize: 20 }} />
+                                )}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
+                      </>
+                    ),
+                  },
+                }}
               />
             )}
           />

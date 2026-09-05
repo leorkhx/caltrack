@@ -2,18 +2,33 @@
 Calorie Tracker.html
 interview/
 
-# Python
+# Node / JS (root scripts + frontend) — catches node_modules at any depth
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (backend)
 backend/.venv/
-backend/__pycache__/
-backend/**/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 backend/*.db
-backend/.pytest_cache/
-backend/.env
+backend/*.db-journal
 
-# Node / frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.env
+# Env files (never commit secrets/tokens)
+.env
+.env.*
 
-# OS
+# Editors / OS
 .DS_Store
+.vscode/
+.idea/
+*.swp

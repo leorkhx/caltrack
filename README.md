@@ -31,7 +31,7 @@ pnpm dev
 # App: http://localhost:3000
 ```
 
-Full details (tokens, per-user calorie limits, Postgres setup, test suite) are in
+Full details (tokens, per-user calorie limits, Postgres setup) are in
 `backend/README.md` and `frontend/README.md`.
 
 ### Run both at once

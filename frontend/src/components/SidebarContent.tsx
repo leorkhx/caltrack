@@ -5,6 +5,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import StarIcon from "@mui/icons-material/Star";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Box, ButtonBase, IconButton, Stack, Tooltip, Typography } from "@mui/material";
@@ -60,6 +61,7 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
 
   const navItems = [
     { label: "My day", icon: <RestaurantIcon fontSize="small" />, path: "/", visible: true, onHover: undefined },
+    { label: "Favorites", icon: <StarIcon fontSize="small" />, path: "/favorites", visible: true, onHover: undefined },
     {
       label: "All entries",
       icon: <ListAltIcon fontSize="small" />,

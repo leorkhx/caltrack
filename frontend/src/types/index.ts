@@ -78,6 +78,38 @@ export interface FdcSearchResult {
   meta?: Record<string, unknown>;
 }
 
+export interface FavoriteFood {
+  id: number;
+  food_name: string;
+  calories: number;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  from_fdc: boolean;
+  created_at: string;
+}
+
+export interface FavoriteFoodInput {
+  food_name: string;
+  calories: number;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  from_fdc?: boolean;
+}
+
+/** A single autocomplete suggestion in the food-name search, tagged by
+ * source so the UI can badge favorites separately from live FDC results. */
+export interface FoodSuggestion {
+  source: "favorite" | "fdc";
+  name: string;
+  calories: number;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  favoriteId?: number;
+}
+
 export interface WeekComparison {
   last_7_days_count: number;
   previous_7_days_count: number;

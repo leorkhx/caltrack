@@ -11,6 +11,7 @@ import { FoodEntriesPage } from "./pages/FoodEntries/FoodEntriesPage";
 import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
+import { FavoritesPage } from "./pages/Favorites/FavoritesPage";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import { clearActiveToken, getActiveToken } from "./auth/accounts";
 import { queryClient } from "./api/queryClient";
@@ -91,6 +92,14 @@ function AppRoutes() {
             <RequireAdmin user={user} loading={loading}>
               <ReportsPage />
             </RequireAdmin>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/favorites"
+        element={
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+            <FavoritesPage />
           </AppShell>
         }
       />

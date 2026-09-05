@@ -28,4 +28,5 @@ export const queryKeys = {
     page_size?: number;
   }) => ["admin-entries", params] as const,
   reports: ["reports"] as const,
+  favorites: ["favorites"] as const,
 };

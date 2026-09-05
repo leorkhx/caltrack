@@ -35,3 +35,4 @@ class User(Base):
     sex: Mapped[Optional[BiologicalSex]] = mapped_column(Enum(BiologicalSex, native_enum=False, length=10), nullable=True)
 
     food_entries = relationship("FoodEntry", back_populates="user", cascade="all, delete-orphan")
+    favorite_foods = relationship("FavoriteFood", back_populates="user", cascade="all, delete-orphan")
