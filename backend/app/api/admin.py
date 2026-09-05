@@ -20,7 +20,7 @@ from app.services import food_entry_service
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-def _to_admin_out(entry: FoodEntry) -> AdminFoodEntryOut:
+def _to_admin_out(entry: FoodEntry, day_total: int) -> AdminFoodEntryOut:
     return AdminFoodEntryOut(
         id=entry.id,
         user_id=entry.user_id,
@@ -32,6 +32,7 @@ def _to_admin_out(entry: FoodEntry) -> AdminFoodEntryOut:
         updated_at=entry.updated_at,
         user_name=entry.user.name,
         user_daily_limit=entry.user.daily_calorie_limit,
+        day_total=day_total,
     )
 
 
@@ -51,8 +52,12 @@ def list_all_entries(
     _admin: User = Depends(require_admin),
 ):
     items, total = food_entry_service.list_entries_admin(db, user_id, date_from, date_to, page, page_size)
+    day_totals = food_entry_service.day_totals_for(db, items)
     return PaginatedAdminFoodEntries(
-        items=[_to_admin_out(e) for e in items], total=total, page=page, page_size=page_size
+        items=[_to_admin_out(e, day_totals.get((e.user_id, e.consumed_at.date()), e.calories)) for e in items],
+        total=total,
+        page=page,
+        page_size=page_size,
     )
 
 
@@ -63,7 +68,8 @@ def create_entry(
     _admin: User = Depends(require_admin),
 ):
     entry = food_entry_service.create_entry_admin(db, payload)
-    return _to_admin_out(entry)
+    day_total = food_entry_service.day_totals_for(db, [entry]).get((entry.user_id, entry.consumed_at.date()), entry.calories)
+    return _to_admin_out(entry, day_total)
 
 
 @router.put("/food-entries/{entry_id}", response_model=AdminFoodEntryOut)
@@ -76,7 +82,8 @@ def update_entry(
 ):
     entry = food_entry_service.get_entry_or_404(db, entry_id, admin, is_admin=True)
     entry = food_entry_service.update_entry(db, entry, payload, is_admin=True)
-    return _to_admin_out(entry)
+    day_total = food_entry_service.day_totals_for(db, [entry]).get((entry.user_id, entry.consumed_at.date()), entry.calories)
+    return _to_admin_out(entry, day_total)
 
 
 @router.delete("/food-entries/{entry_id}", status_code=204)

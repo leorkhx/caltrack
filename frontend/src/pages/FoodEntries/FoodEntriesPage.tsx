@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Box, Button, Stack, Typography, Card, CircularProgress } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import NoMealsIcon from "@mui/icons-material/NoMeals";
@@ -9,12 +9,7 @@ import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import {
-  createMyEntry,
-  deleteMyEntry,
-  fetchMyEntries,
-  updateMyEntry,
-} from "../../api/foodEntries";
+import { useMyEntries, useMyEntryMutations } from "../../hooks/useMyEntries";
 import type { FoodEntry, FoodEntryInput, User } from "../../types";
 import { todayIso } from "../../utils/validation";
 
@@ -33,27 +28,17 @@ interface FoodEntriesPageProps {
 }
 
 export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
-  const [entries, setEntries] = useState<FoodEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState(isoDaysAgo(6));
   const [dateTo, setDateTo] = useState(todayIso());
   const [rangeDays, setRangeDays] = useState<number | null>(7);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FoodEntry | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchMyEntries({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
-      setEntries(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [dateFrom, dateTo]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { data: entries = [], isLoading: loading } = useMyEntries({
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
+  const { create, update, remove } = useMyEntryMutations();
 
   const limit = currentUser.daily_calorie_limit;
 
@@ -115,16 +100,14 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
 
   const handleSave = async (input: FoodEntryInput) => {
     if (editing) {
-      await updateMyEntry(editing.id, input);
+      await update.mutateAsync({ id: editing.id, input });
     } else {
-      await createMyEntry(input);
+      await create.mutateAsync(input);
     }
-    await load();
   };
 
-  const handleDelete = async (id: number) => {
-    await deleteMyEntry(id);
-    await load();
+  const handleDelete = (id: number) => {
+    remove.mutate(id);
   };
 
   const setQuickRange = (days: number | null) => {

@@ -28,6 +28,30 @@ def list_entries_for_user(
     return query.order_by(FoodEntry.consumed_at.desc()).all()
 
 
+def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date], int]:
+    """Sum of calories per (user_id, day) for just the users/date-range covered
+    by `items` — avoids pulling every entry in the table to compute totals for
+    one page's worth of rows."""
+    if not items:
+        return {}
+    user_ids = {e.user_id for e in items}
+    dates = [e.consumed_at.date() for e in items]
+    start = datetime.combine(min(dates), time.min)
+    end = datetime.combine(max(dates), time.max)
+    rows = (
+        db.query(FoodEntry.user_id, FoodEntry.consumed_at, FoodEntry.calories)
+        .filter(FoodEntry.user_id.in_(user_ids))
+        .filter(FoodEntry.consumed_at >= start)
+        .filter(FoodEntry.consumed_at <= end)
+        .all()
+    )
+    totals: dict[tuple[int, date], int] = {}
+    for user_id, consumed_at, calories in rows:
+        key = (user_id, consumed_at.date())
+        totals[key] = totals.get(key, 0) + calories
+    return totals
+
+
 def list_entries_admin(
     db: Session,
     user_id: Optional[int] = None,

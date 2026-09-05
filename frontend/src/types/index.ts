@@ -22,6 +22,7 @@ export interface FoodEntry {
 export interface AdminFoodEntry extends FoodEntry {
   user_name: string;
   user_daily_limit: number;
+  day_total: number;
 }
 
 export interface PaginatedAdminFoodEntries {

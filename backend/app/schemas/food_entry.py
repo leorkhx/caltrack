@@ -85,6 +85,7 @@ class FoodEntryOut(BaseModel):
 class AdminFoodEntryOut(FoodEntryOut):
     user_name: str
     user_daily_limit: int
+    day_total: int
 
 
 class PaginatedAdminFoodEntries(BaseModel):

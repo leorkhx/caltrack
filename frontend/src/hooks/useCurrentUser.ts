@@ -1,35 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchMe } from "../api/users";
 import { getActiveToken } from "../auth/accounts";
-import type { User } from "../types";
+import { queryKeys } from "../api/queryClient";
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.me,
+    queryFn: fetchMe,
+    enabled: Boolean(getActiveToken()),
+  });
 
-  const reload = useCallback(async () => {
-    if (!getActiveToken()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const me = await fetchMe();
-      setUser(me);
-    } catch (err) {
-      setUser(null);
-      setError(err instanceof Error ? err.message : "Failed to load user.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
-
-  return { user, loading, error, reload };
+  return {
+    user: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : null,
+    reload: query.refetch,
+  };
 }

@@ -25,10 +25,18 @@ DATABASE_URL=sqlite:///./app.db
 USER_TOKEN=user-token-luiza
 USER2_TOKEN=user-token-marco
 ADMIN_TOKEN=admin-token-super-secret
+USER_EMAIL=luiza@example.com
+USER2_EMAIL=marco@example.com
+ADMIN_EMAIL=admin@example.com
 FDC_API_KEY=DEMO_KEY
 DEFAULT_DAILY_LIMIT=2100
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
+
+`USER_EMAIL`/`USER2_EMAIL`/`ADMIN_EMAIL` are reference-only — the app never
+reads them. They document which email ("username" on the frontend's sign-in
+form) each token ("password") belongs to. The actual value the app checks is
+each user's `email` column in the DB; keep these two in sync manually.
 
 Swagger UI: http://localhost:8000/docs.
 
@@ -48,12 +56,15 @@ and paste the result into `token_hash` directly.)
 
 ## Auth tokens (change these easily)
 
-Auth is predefined bearer tokens, no signup/login. The token itself only ever
-lives in `backend/.env` (`USER_TOKEN`, `USER2_TOKEN`, `ADMIN_TOKEN` — these are
-just documentation of what you intend to hand out, not enforced by the app);
-what actually authenticates a request is the matching `token_hash` in the
-`users` table (see above). To change a token, update the row's `token_hash` to
-the SHA-256 hex digest of the new value. Tokens are never stored in plaintext.
+Auth is predefined bearer tokens, no signup/login — the frontend's sign-in
+page just presents it as username (`email`) + password (the token) so it
+looks like a normal login. The token itself only ever lives in `backend/.env`
+(`USER_TOKEN`, `USER2_TOKEN`, `ADMIN_TOKEN` — these are documentation of what
+you intend to hand out, not enforced by the app); what actually authenticates
+a request is the matching `token_hash` in the `users` table (see above). To
+change a token, update the row's `token_hash` to the SHA-256 hex digest of the
+new value. Tokens are never stored in plaintext. To change a "username,"
+update that user's `email` column instead.
 
 ## Per-user daily calorie limit (change these easily)
 

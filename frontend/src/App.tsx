@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Box, CircularProgress, CssBaseline, ThemeProvider, Typography } from "@mui/material";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { RequireAdmin } from "./auth/RequireAdmin";
@@ -9,6 +10,7 @@ import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import { clearActiveToken, getActiveToken } from "./auth/accounts";
+import { queryClient } from "./api/queryClient";
 import { theme } from "./theme";
 import type { User } from "./types";
 
@@ -55,6 +57,7 @@ function AppRoutes() {
 
   const handleSignOut = () => {
     clearActiveToken();
+    queryClient.clear();
     reload();
   };
 
@@ -95,11 +98,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
