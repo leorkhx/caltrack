@@ -14,6 +14,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { useNavigate } from "react-router-dom";
 import { fetchMe } from "../../api/users";
 import { clearActiveToken, setActiveToken } from "../../auth/accounts";
 
@@ -32,6 +33,7 @@ interface SignInPageProps {
  * credentials rather than exposing which field was wrong.
  */
 export function SignInPage({ onSignedIn }: SignInPageProps) {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +55,7 @@ export function SignInPage({ onSignedIn }: SignInPageProps) {
         setError("Invalid username or password.");
         return;
       }
+      navigate("/", { replace: true });
       onSignedIn();
     } catch {
       clearActiveToken();

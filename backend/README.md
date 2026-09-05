@@ -118,8 +118,10 @@ except `/health`. See `/docs` for the full interactive schema. Highlights:
 - `GET /api/users/me` — current user profile incl. role, daily_calorie_limit,
   macro targets.
 - `PATCH /api/users/me` — self-service update of daily_calorie_limit
-  (800–10000) and protein/carbs/fat targets in grams (0–1000, or null to
-  clear). Used by the frontend's Settings page.
+  (800–10000), protein/carbs/fat targets in grams (0–1000, or null to clear),
+  and height/weight/age/sex (used to compute `basal_metabolic_rate_kcal` via
+  Mifflin-St Jeor, returned on `GET /api/users/me` once all four are set).
+  Used by the frontend's Settings page.
 - `GET /api/foods/search?q=` — USDA FDC-backed autocomplete (any authenticated
   user). Returns `{results: [{name, calories, meta}]}`; returns an empty list
   (never an error) if FDC is unreachable or the key is rate-limited.

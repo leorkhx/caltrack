@@ -1,4 +1,5 @@
 export type UserRole = "user" | "admin";
+export type BiologicalSex = "male" | "female";
 
 export interface User {
   id: number;
@@ -9,6 +10,11 @@ export interface User {
   protein_target_g: number | null;
   carbs_target_g: number | null;
   fat_target_g: number | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  age: number | null;
+  sex: BiologicalSex | null;
+  basal_metabolic_rate_kcal: number | null;
 }
 
 export interface UserSettingsInput {
@@ -16,6 +22,10 @@ export interface UserSettingsInput {
   protein_target_g?: number | null;
   carbs_target_g?: number | null;
   fat_target_g?: number | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  age?: number | null;
+  sex?: BiologicalSex | null;
 }
 
 export interface FoodEntry {

@@ -1,4 +1,6 @@
-import { Button, Stack, TextField } from "@mui/material";
+import { Button, Stack } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
+import dayjs, { type Dayjs } from "dayjs";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 
 interface FiltersBarProps {
@@ -58,22 +60,22 @@ export function FiltersBar({
         sx={{ px: 1.5, py: 0.5, bgcolor: "#fff", borderRadius: "15px", border: "1px solid rgba(23,26,40,0.06)" }}
       >
         <DateRangeIcon sx={{ fontSize: 18, color: "text.secondary" }} />
-        <TextField
-          type="date"
-          variant="standard"
-          value={dateFrom}
-          onChange={(e) => onDateFromChange(e.target.value)}
-          slotProps={{ input: { disableUnderline: true } }}
-          sx={{ width: 132 }}
+        <DatePicker
+          value={dateFrom ? dayjs(dateFrom) : null}
+          onChange={(value: Dayjs | null) => onDateFromChange(value ? value.format("YYYY-MM-DD") : "")}
+          maxDate={dayjs()}
+          slotProps={{
+            textField: { variant: "standard", sx: { width: 132 }},
+          }}
         />
         <span style={{ color: "#c3c7d4", fontWeight: 700 }}>-</span>
-        <TextField
-          type="date"
-          variant="standard"
-          value={dateTo}
-          onChange={(e) => onDateToChange(e.target.value)}
-          slotProps={{ input: { disableUnderline: true } }}
-          sx={{ width: 132 }}
+        <DatePicker
+          value={dateTo ? dayjs(dateTo) : null}
+          onChange={(value: Dayjs | null) => onDateToChange(value ? value.format("YYYY-MM-DD") : "")}
+          maxDate={dayjs()}
+          slotProps={{
+            textField: { variant: "standard", sx: { width: 132 }},
+          }}
         />
       </Stack>
       {onReset && (

@@ -1,6 +1,7 @@
 # CalTrack — Frontend
 
-React + TypeScript + Material UI (v7), Vite, React Router, TanStack Query.
+React + TypeScript + Material UI (v7), Vite, React Router, TanStack Query,
+MUI X Date Pickers (dayjs adapter).
 
 ## Setup
 
@@ -66,6 +67,8 @@ src/
 │   ├── SignIn/          Token-paste "sign in" (not a real login/signup)
 │   ├── FoodEntries/     "My day" — own entries, date filter, log/edit/delete
 │   ├── Admin/           All-entries CRUD table + Reports dashboard
+│   ├── Settings/        Daily limit, macro targets (with diet-type presets +
+│   │                    a visual breakdown bar), body metrics -> estimated BMR
 ├── hooks/       useCurrentUser, useMyEntries, useAdminEntries, useReports,
 │                useDebouncedValue — all TanStack Query-backed
 ├── types/       shared API types
