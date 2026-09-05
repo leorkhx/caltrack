@@ -1,6 +1,6 @@
 # CalTrack — Frontend
 
-React + TypeScript + Material UI (v7), Vite, React Router.
+React + TypeScript + Material UI (v7), Vite, React Router, TanStack Query.
 
 ## Setup
 
@@ -32,19 +32,42 @@ the sidebar) and sign back in with different credentials — the backend is the 
 authority on who's allowed to see what, a non-admin token still gets a 403
 from `/api/admin/*` regardless of what the frontend shows.
 
+## Data fetching / caching
+
+All server data goes through **TanStack Query** (`api/queryClient.ts` sets up
+the `QueryClient` + a `queryKeys` factory), not manual `useState`/`useEffect`.
+This fixes two things a hand-rolled fetch-on-mount pattern doesn't:
+
+- **No loading-spinner flicker on repeat navigation** — cached data renders
+  instantly while a background refetch confirms it's still fresh
+  (`staleTime: 15s`), instead of unmounting to a spinner every time.
+- **Prefetching** — hovering "All entries" or "Reports" in the sidebar
+  (`components/SidebarContent.tsx`) fires the query before you even click, so
+  the page is often already cached by the time you land on it.
+
+Per-resource hooks live in `hooks/` (`useMyEntries`, `useAdminEntries` +
+`useAdminUsers`, `useReports`) — queries for reads, mutations for
+create/update/delete, each mutation invalidating the relevant query key on
+success. `queryClient.clear()` is called on sign-out so a different user's
+data can't leak into the next session's cache.
+
 ## Structure
 
 ```
 src/
-├── api/         axios client (attaches bearer token) + typed calls per resource
+├── api/         axios client (attaches bearer token), typed calls per resource,
+│                queryClient.ts (TanStack Query client + query key factory)
 ├── auth/        localStorage-backed active-token storage, RequireAdmin route guard
-├── components/  Sidebar, EntryDialog (FDC autocomplete + validation), EntryRow,
-│                CalorieRing, StatCard, FiltersBar
+├── components/  Sidebar (responsive: persistent panel on desktop, app bar +
+│                drawer on mobile) / SidebarContent, EntryDialog (FDC
+│                autocomplete + validation), EntryRow, CalorieRing, StatCard,
+│                FiltersBar
 ├── pages/
 │   ├── SignIn/          Token-paste "sign in" (not a real login/signup)
 │   ├── FoodEntries/     "My day" — own entries, date filter, log/edit/delete
 │   ├── Admin/           All-entries CRUD table + Reports dashboard
-├── hooks/       useCurrentUser, useDebouncedValue
+├── hooks/       useCurrentUser, useMyEntries, useAdminEntries, useReports,
+│                useDebouncedValue — all TanStack Query-backed
 ├── types/       shared API types
 └── theme.ts     MUI theme (indigo accent, rounded cards, soft shadows)
 ```

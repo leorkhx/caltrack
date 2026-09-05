@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Box, CircularProgress, CssBaseline, ThemeProvider, Typography } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
@@ -8,6 +10,7 @@ import { SignInPage } from "./pages/SignIn/SignInPage";
 import { FoodEntriesPage } from "./pages/FoodEntries/FoodEntriesPage";
 import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
+import { SettingsPage } from "./pages/Settings/SettingsPage";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import { clearActiveToken, getActiveToken } from "./auth/accounts";
 import { queryClient } from "./api/queryClient";
@@ -91,6 +94,14 @@ function AppRoutes() {
           </AppShell>
         }
       />
+      <Route
+        path="/settings"
+        element={
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+            {user && <SettingsPage currentUser={user} />}
+          </AppShell>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -101,9 +112,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </LocalizationProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

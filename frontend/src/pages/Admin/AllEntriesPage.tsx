@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import ShieldIcon from "@mui/icons-material/Shield";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -15,17 +15,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import {
-  createEntryAsAdmin,
-  deleteEntryAsAdmin,
-  fetchAllEntries,
-  fetchAllUsers,
-  updateEntryAsAdmin,
-} from "../../api/admin";
+import { useAdminEntries, useAdminEntryMutations, useAdminUsers } from "../../hooks/useAdminEntries";
 import { FiltersBar } from "../../components/FiltersBar";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
-import type { AdminFoodEntry, FoodEntryInput, User } from "../../types";
+import type { AdminFoodEntry, FoodEntryInput } from "../../types";
 
 const PAGE_SIZE = 10;
 
@@ -48,46 +42,29 @@ interface AllEntriesPageProps {
 }
 
 export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
-  const [users, setUsers] = useState<User[]>([]);
-  const [entries, setEntries] = useState<AdminFoodEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<AdminFoodEntry | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [usersData, entriesData] = await Promise.all([
-        users.length ? Promise.resolve(users) : fetchAllUsers(),
-        fetchAllEntries({
-          user_id: selectedUserId ?? undefined,
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-          page,
-          page_size: PAGE_SIZE,
-        }),
-      ]);
-      setUsers(usersData);
-      setEntries(entriesData.items);
-      setTotal(entriesData.total);
-    } catch {
-      setError("Failed to load entries.");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId, dateFrom, dateTo, page]);
+  const { data: users = [] } = useAdminUsers();
+  const {
+    data: entriesData,
+    isLoading: loading,
+    isError,
+  } = useAdminEntries({
+    user_id: selectedUserId ?? undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    page,
+    page_size: PAGE_SIZE,
+  });
+  const { create, update, remove } = useAdminEntryMutations();
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const entries = entriesData?.items ?? [];
+  const total = entriesData?.total ?? 0;
 
   const userLimitMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -98,7 +75,9 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const computeExistingTotal = useCallback(
     (userId: number, dateIso: string, excludeEntryId: number | null) => {
       // Best-effort using the currently loaded page; admin dataset can be large,
-      // so this is an approximation when the relevant entries aren't all loaded.
+      // so this is an approximation for the dialog's "projected total" preview.
+      // The per-row over/under-limit indicator below uses the backend's exact
+      // day_total instead.
       return entries
         .filter(
           (e) => e.user_id === userId && e.consumed_at.slice(0, 10) === dateIso && e.id !== excludeEntryId
@@ -110,17 +89,15 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const handleSave = async (input: FoodEntryInput) => {
     if (editingEntry) {
-      await updateEntryAsAdmin(editingEntry.id, input);
+      await update.mutateAsync({ id: editingEntry.id, input });
     } else {
-      await createEntryAsAdmin(input);
+      await create.mutateAsync(input);
     }
-    await load();
   };
 
-  const handleDelete = async (entry: AdminFoodEntry) => {
+  const handleDelete = (entry: AdminFoodEntry) => {
     if (!window.confirm(`Delete "${entry.food_name}" for ${entry.user_name}?`)) return;
-    await deleteEntryAsAdmin(entry.id);
-    await load();
+    remove.mutate(entry.id);
   };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -214,9 +191,9 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
           <CircularProgress />
         </Box>
       )}
-      {error && <Alert severity="error">{error}</Alert>}
+      {isError && <Alert severity="error">Failed to load entries.</Alert>}
 
-      {!loading && !error && (
+      {!loading && !isError && (
         <Card sx={{ p: 1.5, overflowX: "auto" }}>
           {entries.length === 0 && (
             <Typography sx={{ p: 4, textAlign: "center" }} color="text.secondary">
@@ -225,8 +202,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
           )}
           <Box sx={{ minWidth: 640 }}>
           {entries.map((entry) => {
-            const dayTotal = computeExistingTotal(entry.user_id, entry.consumed_at.slice(0, 10), null);
-            const over = dayTotal > entry.user_daily_limit;
+            const over = entry.day_total > entry.user_daily_limit;
             return (
               <EntryRow
                 key={entry.id}

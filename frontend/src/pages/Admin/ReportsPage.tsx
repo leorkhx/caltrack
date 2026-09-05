@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Box, Card, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import ShieldPersonIcon from "@mui/icons-material/Shield";
 import EventNoteIcon from "@mui/icons-material/EventNote";
@@ -6,20 +5,12 @@ import PercentIcon from "@mui/icons-material/Percent";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import { fetchReports } from "../../api/admin";
-import type { ReportsData } from "../../types";
+import { useReports } from "../../hooks/useReports";
 
 const AV = ["#5b5bd6", "#9333a8", "#0f8f7a", "#c02a63", "#c07a2a"];
 
 export function ReportsPage() {
-  const [data, setData] = useState<ReportsData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchReports()
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useReports();
 
   if (loading) {
     return (

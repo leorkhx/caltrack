@@ -13,6 +13,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import dayjs, { type Dayjs } from "dayjs";
 import CloseIcon from "@mui/icons-material/Close";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { searchFoods } from "../api/foods";
@@ -207,24 +209,24 @@ export function EntryDialog({
           )}
 
           <Stack direction="row" gap={1.5}>
-            <TextField
+            <DatePicker
               label="Date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              onBlur={() => setTouched(true)}
-              error={touched && Boolean(errors.date)}
-              helperText={touched && errors.date}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
+              value={dayjs(date)}
+              onChange={(value: Dayjs | null) => value && setDate(value.format("YYYY-MM-DD"))}
+              maxDate={dayjs()}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  error: touched && Boolean(errors.date),
+                  helperText: touched && errors.date,
+                },
+              }}
             />
-            <TextField
+            <TimePicker
               label="Time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
+              value={dayjs(`${date}T${time}`)}
+              onChange={(value: Dayjs | null) => value && setTime(value.format("HH:mm"))}
+              slotProps={{ textField: { fullWidth: true } }}
             />
           </Stack>
 
@@ -266,7 +268,6 @@ export function EntryDialog({
                 {...params}
                 label="Food name"
                 placeholder="Start typing to search USDA FoodData Central..."
-                onBlur={() => setTouched(true)}
                 error={touched && Boolean(errors.foodName)}
                 helperText={
                   (touched && errors.foodName) ||
@@ -283,7 +284,6 @@ export function EntryDialog({
               setCaloriesText(e.target.value.replace(/[^\d]/g, ""));
               setFromFdc(false);
             }}
-            onBlur={() => setTouched(true)}
             error={touched && Boolean(errors.calories)}
             helperText={touched && errors.calories}
             fullWidth

@@ -6,6 +6,16 @@ export interface User {
   email: string;
   role: UserRole;
   daily_calorie_limit: number;
+  protein_target_g: number | null;
+  carbs_target_g: number | null;
+  fat_target_g: number | null;
+}
+
+export interface UserSettingsInput {
+  daily_calorie_limit?: number;
+  protein_target_g?: number | null;
+  carbs_target_g?: number | null;
+  fat_target_g?: number | null;
 }
 
 export interface FoodEntry {

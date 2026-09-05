@@ -10,7 +10,7 @@ python3 -m venv .venv          # any Python 3.9+ interpreter works
 source .venv/bin/activate
 pip install -r requirements.txt
 # Only if you point DATABASE_URL at Postgres/Supabase:
-# pip install -r requirements-postgres.txt
+# pip install psycopg2-binary
 
 alembic upgrade head           # create tables (backend/.env already has working defaults)
 
@@ -76,9 +76,9 @@ every endpoint via `app/schemas/user.py` / `app/api/users.py::get_me`.
 ## Database
 
 Defaults to SQLite (`sqlite:///./app.db`), zero setup. To use Postgres/Supabase,
-set `DATABASE_URL=postgresql://...` in `.env` and install
-`requirements-postgres.txt`. No SQLite-only types are used, so the same models
-and migrations work unmodified against Postgres.
+set `DATABASE_URL=postgresql://...` in `.env` and `pip install psycopg2-binary`.
+No SQLite-only types are used, so the same models and migrations work
+unmodified against Postgres.
 
 ## Structure
 
@@ -115,7 +115,11 @@ except `/health`. See `/docs` for the full interactive schema. Highlights:
 
 - `GET/POST /api/food-entries`, `PUT|PATCH|DELETE /api/food-entries/{id}` — the
   caller's own entries only.
-- `GET /api/users/me` — current user profile incl. role + daily_calorie_limit.
+- `GET /api/users/me` — current user profile incl. role, daily_calorie_limit,
+  macro targets.
+- `PATCH /api/users/me` — self-service update of daily_calorie_limit
+  (800–10000) and protein/carbs/fat targets in grams (0–1000, or null to
+  clear). Used by the frontend's Settings page.
 - `GET /api/foods/search?q=` — USDA FDC-backed autocomplete (any authenticated
   user). Returns `{results: [{name, calories, meta}]}`; returns an empty list
   (never an error) if FDC is unreachable or the key is rate-limited.

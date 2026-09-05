@@ -16,7 +16,8 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { fetchMe } from "../../api/users";
 import { clearActiveToken, setActiveToken } from "../../auth/accounts";
-import { APP_NAME } from "../../appName";
+
+const APP_NAME = import.meta.env.VITE_APP_NAME || "CalTrack";
 
 interface SignInPageProps {
   onSignedIn: () => void;

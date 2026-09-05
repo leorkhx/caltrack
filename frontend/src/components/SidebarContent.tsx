@@ -1,13 +1,19 @@
 import LocalDiningIcon from "@mui/icons-material/LocalDining";
 import ShieldPersonIcon from "@mui/icons-material/Shield";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsIcon from "@mui/icons-material/Settings";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import { Box, ButtonBase, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
-import { APP_NAME } from "../appName";
+import { fetchAllEntries, fetchAllUsers, fetchReports } from "../api/admin";
+import { queryKeys } from "../api/queryClient";
 import type { User } from "../types";
+
+const ADMIN_ENTRIES_DEFAULT_PARAMS = { page: 1, page_size: 10 };
+const APP_NAME = import.meta.env.VITE_APP_NAME || "CalTrack";
 
 interface SidebarContentProps {
   currentUser: User | null;
@@ -19,12 +25,33 @@ interface SidebarContentProps {
 export function SidebarContent({ currentUser, onSignOut, onNavigate }: SidebarContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const isAdmin = currentUser?.role === "admin";
 
   const navItems = [
-    { label: "My day", icon: <RestaurantIcon fontSize="small" />, path: "/", visible: true },
-    { label: "All entries", icon: <ListAltIcon fontSize="small" />, path: "/admin/entries", visible: isAdmin },
-    { label: "Reports", icon: <BarChartIcon fontSize="small" />, path: "/admin/reports", visible: isAdmin },
+    { label: "My day", icon: <RestaurantIcon fontSize="small" />, path: "/", visible: true, onHover: undefined },
+    {
+      label: "All entries",
+      icon: <ListAltIcon fontSize="small" />,
+      path: "/admin/entries",
+      visible: isAdmin,
+      onHover: () => {
+        queryClient.prefetchQuery({ queryKey: queryKeys.adminUsers, queryFn: fetchAllUsers });
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.adminEntries(ADMIN_ENTRIES_DEFAULT_PARAMS),
+          queryFn: () => fetchAllEntries(ADMIN_ENTRIES_DEFAULT_PARAMS),
+        });
+      },
+    },
+    {
+      label: "Reports",
+      icon: <BarChartIcon fontSize="small" />,
+      path: "/admin/reports",
+      visible: isAdmin,
+      onHover: () => {
+        queryClient.prefetchQuery({ queryKey: queryKeys.reports, queryFn: fetchReports });
+      },
+    },
   ].filter((n) => n.visible);
 
   return (
@@ -60,6 +87,7 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate }: SidebarCo
           return (
             <ButtonBase
               key={item.path}
+              onMouseEnter={item.onHover}
               onClick={() => {
                 navigate(item.path);
                 onNavigate?.();
@@ -103,11 +131,25 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate }: SidebarCo
                 {currentUser ? currentUser.name : "—"}
               </Typography>
             </Box>
-            <Tooltip title="Sign out">
-              <IconButton size="small" onClick={onSignOut} sx={{ borderRadius: "10px" }}>
-                <LogoutIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row" gap={0.5}>
+              <Tooltip title="Settings">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    navigate("/settings");
+                    onNavigate?.();
+                  }}
+                  sx={{ borderRadius: "10px" }}
+                >
+                  <SettingsIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Sign out">
+                <IconButton size="small" onClick={onSignOut} sx={{ borderRadius: "10px" }}>
+                  <LogoutIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Stack>
           <Stack direction="row" alignItems="center" gap={0.75} sx={{ mt: 1, overflow: "hidden" }}>
             <ShieldPersonIcon sx={{ fontSize: 14, color: "text.secondary" }} />

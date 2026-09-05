@@ -79,7 +79,7 @@ you want a persistent shared DB instead of a local file):
 3. Install the Postgres driver and run migrations:
    ```bash
    cd backend
-   pip install -r requirements-postgres.txt
+   pip install psycopg2-binary
    alembic upgrade head
    ```
 
