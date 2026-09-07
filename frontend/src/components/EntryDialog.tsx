@@ -17,6 +17,8 @@ import {
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import dayjs, { type Dayjs } from "dayjs";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddIcon from "@mui/icons-material/Add";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
@@ -37,6 +39,8 @@ interface EntryDialogProps {
   getUserLimit: (userId: number) => number;
   computeExistingTotal: (userId: number, dateIso: string, excludeEntryId: number | null) => number;
 }
+
+type Step = "search" | "details";
 
 const MEAL_TYPES: { value: MealType; label: string }[] = [
   { value: "breakfast", label: "Breakfast" },
@@ -83,6 +87,8 @@ export function EntryDialog({
 }: EntryDialogProps) {
   const isEdit = Boolean(initialEntry);
 
+  const [step, setStep] = useState<Step>("search");
+  const [query, setQuery] = useState("");
   const [userId, setUserId] = useState<number>(currentUserId);
   const [foodName, setFoodName] = useState("");
   const [caloriesText, setCaloriesText] = useState("");
@@ -99,7 +105,7 @@ export function EntryDialog({
 
   const [fdcOptions, setFdcOptions] = useState<FoodSuggestion[]>([]);
   const [fdcLoading, setFdcLoading] = useState(false);
-  const debouncedName = useDebouncedValue(foodName, 350);
+  const debouncedQuery = useDebouncedValue(query, 350);
 
   const { data: favorites = [] } = useFavorites();
   const { create: createFavorite } = useFavoriteMutations();
@@ -110,6 +116,7 @@ export function EntryDialog({
   useEffect(() => {
     if (!open) return;
     if (initialEntry) {
+      setStep("details");
       setUserId(initialEntry.user_id);
       setFoodName(initialEntry.food_name);
       setCaloriesText(String(initialEntry.calories));
@@ -121,6 +128,8 @@ export function EntryDialog({
       setTime(toTimeInput(initialEntry.consumed_at));
       setFromFdc(initialEntry.from_fdc);
     } else {
+      setStep("search");
+      setQuery("");
       setUserId(currentUserId);
       setFoodName("");
       setCaloriesText("");
@@ -138,12 +147,12 @@ export function EntryDialog({
 
   useEffect(() => {
     let cancelled = false;
-    if (debouncedName.trim().length < 2) {
+    if (debouncedQuery.trim().length < 2) {
       setFdcOptions([]);
       return;
     }
     setFdcLoading(true);
-    searchFoods(debouncedName)
+    searchFoods(debouncedQuery)
       .then((results) => {
         if (!cancelled) {
           setFdcOptions(
@@ -167,15 +176,15 @@ export function EntryDialog({
     return () => {
       cancelled = true;
     };
-  }, [debouncedName]);
+  }, [debouncedQuery]);
 
   const combinedOptions: FoodSuggestion[] = useMemo(() => {
-    const query = debouncedName.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     const favoriteMatches: FoodSuggestion[] =
-      query.length < 2
+      q.length < 2
         ? []
         : favorites
-            .filter((f) => f.food_name.toLowerCase().includes(query))
+            .filter((f) => f.food_name.toLowerCase().includes(q))
             .map((f) => ({
               source: "favorite" as const,
               name: f.food_name,
@@ -187,7 +196,27 @@ export function EntryDialog({
             }));
     // Favorites first — the user already vetted these, no need to re-guess among FDC's per-100g vs per-serving values.
     return [...favoriteMatches, ...fdcOptions];
-  }, [debouncedName, favorites, fdcOptions]);
+  }, [debouncedQuery, favorites, fdcOptions]);
+
+  const selectSuggestion = (value: FoodSuggestion) => {
+    setFoodName(value.name);
+    setCaloriesText(String(value.calories));
+    setProtein(value.protein_g != null ? String(value.protein_g) : "");
+    setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
+    setFat(value.fat_g != null ? String(value.fat_g) : "");
+    setFromFdc(value.source === "fdc");
+    setStep("details");
+  };
+
+  const selectManualName = () => {
+    setFoodName(query.trim());
+    setCaloriesText("");
+    setProtein("");
+    setCarbs("");
+    setFat("");
+    setFromFdc(false);
+    setStep("details");
+  };
 
   const errors: EntryFormErrors = useMemo(
     () => validateEntryForm({ foodName, caloriesText, date, time }),
@@ -201,6 +230,7 @@ export function EntryDialog({
     return existing + cal;
   }, [userId, date, caloriesText, initialEntry, computeExistingTotal]);
   const willExceedLimit = caloriesText !== "" && !errors.calories && projectedTotal > limit;
+  const canSearchManually = query.trim().length >= 2;
 
   const handleSubmit = async () => {
     setTouched(true);
@@ -255,10 +285,10 @@ export function EntryDialog({
         </Box>
         <Box sx={{ flex: 1 }}>
           <Typography fontSize={20} fontWeight={800} letterSpacing={-0.4}>
-            {isEdit ? "Edit entry" : "Log food"}
+            {isEdit ? "Edit entry" : step === "search" ? "Log food" : "Fill in the details"}
           </Typography>
           <Typography fontSize={13} fontWeight={500} color="text.secondary">
-            {isEdit ? "Update this food entry" : "Add what you ate, manually or via search"}
+            {isEdit ? "Update this food entry" : step === "search" ? "Search your favorites or USDA FoodData Central" : foodName}
           </Typography>
         </Box>
         <IconButton onClick={onClose} size="small">
@@ -266,208 +296,225 @@ export function EntryDialog({
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Stack gap={2} sx={{ pt: 0.5 }}>
-          {isAdmin && (
-            <TextField
-              select
-              label="User"
-              value={userId}
-              onChange={(e) => setUserId(Number(e.target.value))}
-              fullWidth
-            >
-              {users.map((u) => (
-                <MenuItem key={u.id} value={u.id}>
-                  {u.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-
-          <Stack direction="row" gap={1.5}>
-            <DatePicker
-              label="Date"
-              value={dayjs(date)}
-              onChange={(value: Dayjs | null) => value && setDate(value.format("YYYY-MM-DD"))}
-              maxDate={dayjs()}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  error: touched && Boolean(errors.date),
-                  helperText: touched && errors.date,
-                },
+        {step === "search" ? (
+          <Stack gap={1.5} sx={{ pt: 0.5 }}>
+            <Autocomplete
+              freeSolo
+              options={combinedOptions}
+              loading={fdcLoading}
+              filterOptions={(x) => x}
+              getOptionLabel={(opt) => (typeof opt === "string" ? opt : `${opt.name} (${opt.calories} kcal)`)}
+              inputValue={query}
+              onInputChange={(_, value) => setQuery(value)}
+              onChange={(_, value) => {
+                if (value && typeof value !== "string") selectSuggestion(value);
               }}
+              renderOption={(props, option) => {
+                if (typeof option === "string") return null;
+                const isFavorite = option.source === "favorite";
+                return (
+                  <li {...props} key={`${option.source}-${option.name}-${option.calories}`}>
+                    <Stack direction="row" alignItems="center" gap={1} sx={{ width: "100%" }}>
+                      {isFavorite ? (
+                        <StarIcon sx={{ fontSize: 16, color: "#d98a0f", flex: "none" }} />
+                      ) : (
+                        <StarBorderIcon sx={{ fontSize: 16, color: "transparent", flex: "none" }} />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography fontSize={14} fontWeight={600} noWrap>
+                          {option.name}
+                        </Typography>
+                        <Typography fontSize={12} color="text.secondary">
+                          {option.calories} kcal{isFavorite ? " · favorite" : ""}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </li>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Food name"
+                  placeholder="Start typing to search your favorites or USDA FoodData Central..."
+                  helperText="2+ characters triggers autocomplete."
+                  autoFocus
+                />
+              )}
             />
-            <TimePicker
-              label="Time"
-              value={dayjs(`${date}T${time}`)}
-              onChange={(value: Dayjs | null) => value && setTime(value.format("HH:mm"))}
-              slotProps={{ textField: { fullWidth: true } }}
-            />
+            {canSearchManually && (
+              <Button
+                onClick={selectManualName}
+                startIcon={<AddIcon />}
+                sx={{ justifyContent: "flex-start", alignSelf: "flex-start", textTransform: "none", fontWeight: 600 }}
+              >
+                Can't find it? Add "{query.trim()}" manually
+              </Button>
+            )}
           </Stack>
-
-          <TextField select label="Meal" value={mealType} onChange={(e) => setMealType(e.target.value as MealType)} fullWidth>
-            {MEAL_TYPES.map((m) => (
-              <MenuItem key={m.value} value={m.value}>
-                {m.label}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <Autocomplete
-            freeSolo
-            options={combinedOptions}
-            loading={fdcLoading}
-            filterOptions={(x) => x}
-            getOptionLabel={(opt) => (typeof opt === "string" ? opt : `${opt.name} (${opt.calories} kcal)`)}
-            inputValue={foodName}
-            onInputChange={(_, value) => {
-              setFoodName(value);
-              setFromFdc(false);
-            }}
-            onChange={(_, value) => {
-              if (value && typeof value !== "string") {
-                setFoodName(value.name);
-                setCaloriesText(String(value.calories));
-                setProtein(value.protein_g != null ? String(value.protein_g) : "");
-                setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
-                setFat(value.fat_g != null ? String(value.fat_g) : "");
-                setFromFdc(value.source === "fdc");
-              }
-            }}
-            renderOption={(props, option) => {
-              if (typeof option === "string") return null;
-              const isFavorite = option.source === "favorite";
-              return (
-                <li {...props} key={`${option.source}-${option.name}-${option.calories}`}>
-                  <Stack direction="row" alignItems="center" gap={1} sx={{ width: "100%" }}>
-                    {isFavorite ? (
-                      <StarIcon sx={{ fontSize: 16, color: "#d98a0f", flex: "none" }} />
-                    ) : (
-                      <StarBorderIcon sx={{ fontSize: 16, color: "transparent", flex: "none" }} />
-                    )}
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography fontSize={14} fontWeight={600} noWrap>
-                        {option.name}
-                      </Typography>
-                      <Typography fontSize={12} color="text.secondary">
-                        {option.calories} kcal{isFavorite ? " · favorite" : ""}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </li>
-              );
-            }}
-            renderInput={(params) => (
+        ) : (
+          <Stack gap={2} sx={{ pt: 0.5 }}>
+            {isAdmin && (
               <TextField
-                {...params}
-                label="Food name"
-                placeholder="Start typing to search your favorites or USDA FoodData Central..."
-                error={touched && Boolean(errors.foodName)}
-                helperText={
-                  (touched && errors.foodName) ||
-                  "2+ characters triggers autocomplete. No match? Just type it and enter calories manually."
-                }
+                select
+                label="User"
+                value={userId}
+                onChange={(e) => setUserId(Number(e.target.value))}
+                fullWidth
+              >
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+
+            <Stack direction="row" gap={1.5}>
+              <DatePicker
+                label="Date"
+                value={dayjs(date)}
+                onChange={(value: Dayjs | null) => value && setDate(value.format("YYYY-MM-DD"))}
+                maxDate={dayjs()}
                 slotProps={{
-                  input: {
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {params.InputProps.endAdornment}
-                        {foodName.trim().length >= 2 && (
-                          <Tooltip title={matchingFavoriteId ? "Saved in favorites" : "Save as favorite"}>
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled={Boolean(matchingFavoriteId) || !caloriesText || createFavorite.isPending}
-                                onClick={() =>
-                                  createFavorite.mutate({
-                                    food_name: foodName.trim(),
-                                    calories: Number(caloriesText) || 0,
-                                    protein_g: protein === "" ? null : Number(protein),
-                                    carbs_g: carbs === "" ? null : Number(carbs),
-                                    fat_g: fat === "" ? null : Number(fat),
-                                    from_fdc: fromFdc,
-                                  })
-                                }
-                              >
-                                {matchingFavoriteId ? (
-                                  <StarIcon sx={{ fontSize: 20, color: "#d98a0f" }} />
-                                ) : (
-                                  <StarBorderIcon sx={{ fontSize: 20 }} />
-                                )}
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        )}
-                      </>
-                    ),
+                  textField: {
+                    fullWidth: true,
+                    error: touched && Boolean(errors.date),
+                    helperText: touched && errors.date,
                   },
                 }}
               />
+              <TimePicker
+                label="Time"
+                value={dayjs(`${date}T${time}`)}
+                onChange={(value: Dayjs | null) => value && setTime(value.format("HH:mm"))}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </Stack>
+
+            <TextField select label="Meal" value={mealType} onChange={(e) => setMealType(e.target.value as MealType)} fullWidth>
+              {MEAL_TYPES.map((m) => (
+                <MenuItem key={m.value} value={m.value}>
+                  {m.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              label="Food name"
+              value={foodName}
+              onChange={(e) => {
+                setFoodName(e.target.value);
+                setFromFdc(false);
+              }}
+              error={touched && Boolean(errors.foodName)}
+              helperText={touched && errors.foodName}
+              fullWidth
+              autoFocus={!fromFdc}
+              slotProps={{
+                input: {
+                  endAdornment: foodName.trim().length >= 2 && (
+                    <Tooltip title={matchingFavoriteId ? "Saved in favorites" : "Save as favorite"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={Boolean(matchingFavoriteId) || !caloriesText || createFavorite.isPending}
+                          onClick={() =>
+                            createFavorite.mutate({
+                              food_name: foodName.trim(),
+                              calories: Number(caloriesText) || 0,
+                              protein_g: protein === "" ? null : Number(protein),
+                              carbs_g: carbs === "" ? null : Number(carbs),
+                              fat_g: fat === "" ? null : Number(fat),
+                              from_fdc: fromFdc,
+                            })
+                          }
+                        >
+                          {matchingFavoriteId ? (
+                            <StarIcon sx={{ fontSize: 20, color: "#d98a0f" }} />
+                          ) : (
+                            <StarBorderIcon sx={{ fontSize: 20 }} />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  ),
+                },
+              }}
+            />
+
+            <TextField
+              label="Calories (kcal)"
+              value={caloriesText}
+              onChange={(e) => {
+                setCaloriesText(e.target.value.replace(/[^\d]/g, ""));
+                setFromFdc(false);
+              }}
+              error={touched && Boolean(errors.calories)}
+              helperText={touched && errors.calories}
+              fullWidth
+              autoFocus={fromFdc}
+            />
+
+            <Stack direction="row" gap={1.5}>
+              <TextField
+                label="Protein"
+                value={protein}
+                onChange={(e) => setProtein(digitsOnly(e.target.value))}
+                placeholder="optional"
+                sx={{ flex: 1 }}
+                slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+              />
+              <TextField
+                label="Carbs"
+                value={carbs}
+                onChange={(e) => setCarbs(digitsOnly(e.target.value))}
+                placeholder="optional"
+                sx={{ flex: 1 }}
+                slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+              />
+              <TextField
+                label="Fat"
+                value={fat}
+                onChange={(e) => setFat(digitsOnly(e.target.value))}
+                placeholder="optional"
+                sx={{ flex: 1 }}
+                slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
+              />
+            </Stack>
+
+            {willExceedLimit && (
+              <Alert severity="warning" sx={{ borderRadius: "14px" }}>
+                This will bring the day's total to <strong>{projectedTotal} kcal</strong>, over the{" "}
+                {limit} kcal daily limit.
+              </Alert>
             )}
-          />
 
-          <TextField
-            label="Calories (kcal)"
-            value={caloriesText}
-            onChange={(e) => {
-              setCaloriesText(e.target.value.replace(/[^\d]/g, ""));
-              setFromFdc(false);
-            }}
-            error={touched && Boolean(errors.calories)}
-            helperText={touched && errors.calories}
-            fullWidth
-          />
-
-          <Stack direction="row" gap={1.5}>
-            <TextField
-              label="Protein"
-              value={protein}
-              onChange={(e) => setProtein(digitsOnly(e.target.value))}
-              placeholder="optional"
-              sx={{ flex: 1 }}
-              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
-            />
-            <TextField
-              label="Carbs"
-              value={carbs}
-              onChange={(e) => setCarbs(digitsOnly(e.target.value))}
-              placeholder="optional"
-              sx={{ flex: 1 }}
-              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
-            />
-            <TextField
-              label="Fat"
-              value={fat}
-              onChange={(e) => setFat(digitsOnly(e.target.value))}
-              placeholder="optional"
-              sx={{ flex: 1 }}
-              slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>g</Typography> } }}
-            />
+            {serverError && (
+              <Alert severity="error" sx={{ borderRadius: "14px" }}>
+                {serverError}
+              </Alert>
+            )}
           </Stack>
-
-          {willExceedLimit && (
-            <Alert severity="warning" sx={{ borderRadius: "14px" }}>
-              This will bring the day's total to <strong>{projectedTotal} kcal</strong>, over the{" "}
-              {limit} kcal daily limit.
-            </Alert>
-          )}
-
-          {serverError && (
-            <Alert severity="error" sx={{ borderRadius: "14px" }}>
-              {serverError}
-            </Alert>
-          )}
-        </Stack>
+        )}
       </DialogContent>
-      <Stack direction="row" justifyContent="flex-end" gap={1.5} sx={{ p: 3, pt: 1 }}>
-        <Button onClick={onClose} color="inherit">
-          Cancel
-        </Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
-          {isEdit ? "Save changes" : "Add entry"}
-        </Button>
-      </Stack>
+      {step === "details" && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ p: 3, pt: 1 }}>
+          {!isEdit && (
+            <Button onClick={() => setStep("search")} color="inherit" startIcon={<ArrowBackIcon fontSize="small" />}>
+              Back
+            </Button>
+          )}
+          <Stack direction="row" gap={1.5} sx={{ ml: "auto" }}>
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
+              {isEdit ? "Save changes" : "Add entry"}
+            </Button>
+          </Stack>
+        </Stack>
+      )}
     </Dialog>
   );
 }
