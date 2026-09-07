@@ -5,6 +5,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import InsightsIcon from "@mui/icons-material/Insights";
 import StarIcon from "@mui/icons-material/Star";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -60,8 +61,9 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
   const isAdmin = currentUser?.role === "admin";
 
   const navItems = [
-    { label: "My day", icon: <RestaurantIcon fontSize="small" />, path: "/", visible: true, onHover: undefined },
-    { label: "Favorites", icon: <StarIcon fontSize="small" />, path: "/favorites", visible: true, onHover: undefined },
+    { label: "My day", icon: <RestaurantIcon fontSize="small" />, path: "/", visible: !isAdmin, onHover: undefined },
+    { label: "Favorites", icon: <StarIcon fontSize="small" />, path: "/favorites", visible: !isAdmin, onHover: undefined },
+    { label: "Insights", icon: <InsightsIcon fontSize="small" />, path: "/insights", visible: !isAdmin, onHover: undefined },
     {
       label: "All entries",
       icon: <ListAltIcon fontSize="small" />,

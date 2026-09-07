@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Dialog, DialogContent, DialogTitle, IconButton, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Dialog, DialogContent, DialogTitle, IconButton, Stack, TextField, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import StarIcon from "@mui/icons-material/Star";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import { searchFoods } from "../../api/foods";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useFavoriteMutations } from "../../hooks/useFavorites";
-import type { FavoriteFood } from "../../types";
+import type { FavoriteFood, FdcSearchResult } from "../../types";
 
 interface FavoriteDialogProps {
   open: boolean;
@@ -27,7 +30,12 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
+  const [fromFdc, setFromFdc] = useState(false);
   const [touched, setTouched] = useState(false);
+
+  const [fdcOptions, setFdcOptions] = useState<FdcSearchResult[]>([]);
+  const [fdcLoading, setFdcLoading] = useState(false);
+  const debouncedName = useDebouncedValue(name, 350);
 
   useEffect(() => {
     if (!open) return;
@@ -37,15 +45,39 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
       setProtein(toText(initialFavorite.protein_g));
       setCarbs(toText(initialFavorite.carbs_g));
       setFat(toText(initialFavorite.fat_g));
+      setFromFdc(initialFavorite.from_fdc);
     } else {
       setName("");
       setCalories("");
       setProtein("");
       setCarbs("");
       setFat("");
+      setFromFdc(false);
     }
     setTouched(false);
   }, [open, initialFavorite]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (debouncedName.trim().length < 2) {
+      setFdcOptions([]);
+      return;
+    }
+    setFdcLoading(true);
+    searchFoods(debouncedName)
+      .then((results) => {
+        if (!cancelled) setFdcOptions(results);
+      })
+      .catch(() => {
+        if (!cancelled) setFdcOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFdcLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedName]);
 
   const nameError = touched && name.trim().length < 2 ? "Use at least 2 characters." : "";
   const caloriesError =
@@ -62,7 +94,7 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
       protein_g: protein === "" ? null : Number(protein),
       carbs_g: carbs === "" ? null : Number(carbs),
       fat_g: fat === "" ? null : Number(fat),
-      from_fdc: initialFavorite?.from_fdc ?? false,
+      from_fdc: fromFdc,
     };
     if (isEdit && initialFavorite) {
       await update.mutateAsync({ id: initialFavorite.id, input });
@@ -102,19 +134,63 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
       </DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ pt: 0.5 }}>
-          <TextField
-            label="Food name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            error={Boolean(nameError)}
-            helperText={nameError}
-            fullWidth
-            autoFocus
+          <Autocomplete
+            freeSolo
+            options={fdcOptions}
+            loading={fdcLoading}
+            filterOptions={(x) => x}
+            getOptionLabel={(opt) => (typeof opt === "string" ? opt : `${opt.name} (${opt.calories} kcal)`)}
+            inputValue={name}
+            onInputChange={(_, value) => {
+              setName(value);
+              setFromFdc(false);
+            }}
+            onChange={(_, value) => {
+              if (value && typeof value !== "string") {
+                setName(value.name);
+                setCalories(String(value.calories));
+                setProtein(value.protein_g != null ? String(value.protein_g) : "");
+                setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
+                setFat(value.fat_g != null ? String(value.fat_g) : "");
+                setFromFdc(true);
+              }
+            }}
+            renderOption={(props, option) => {
+              if (typeof option === "string") return null;
+              return (
+                <li {...props} key={`${option.name}-${option.calories}`}>
+                  <Stack direction="row" alignItems="center" gap={1} sx={{ width: "100%" }}>
+                    <VerifiedIcon sx={{ fontSize: 15, color: "#0f8f60", flex: "none" }} />
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography fontSize={14} fontWeight={600} noWrap>
+                        {option.name}
+                      </Typography>
+                      <Typography fontSize={12} color="text.secondary">
+                        {option.calories} kcal
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Food name"
+                placeholder="Start typing to search USDA FoodData Central..."
+                error={Boolean(nameError)}
+                helperText={nameError || "2+ characters searches the FDC database, or just type your own name."}
+                autoFocus
+              />
+            )}
           />
           <TextField
             label="Calories"
             value={calories}
-            onChange={(e) => setCalories(digitsOnly(e.target.value))}
+            onChange={(e) => {
+              setCalories(digitsOnly(e.target.value));
+              setFromFdc(false);
+            }}
             error={Boolean(caloriesError)}
             helperText={caloriesError}
             fullWidth

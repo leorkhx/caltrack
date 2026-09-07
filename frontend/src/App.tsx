@@ -12,6 +12,7 @@ import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
 import { FavoritesPage } from "./pages/Favorites/FavoritesPage";
+import { InsightsPage } from "./pages/Insights/InsightsPage";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import { clearActiveToken, getActiveToken } from "./auth/accounts";
 import { queryClient } from "./api/queryClient";
@@ -70,9 +71,13 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
-            {user && <FoodEntriesPage currentUser={user} />}
-          </AppShell>
+          user?.role === "admin" ? (
+            <Navigate to="/admin/entries" replace />
+          ) : (
+            <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+              {user && <FoodEntriesPage currentUser={user} />}
+            </AppShell>
+          )
         }
       />
       <Route
@@ -98,9 +103,25 @@ function AppRoutes() {
       <Route
         path="/favorites"
         element={
-          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
-            <FavoritesPage />
-          </AppShell>
+          user?.role === "admin" ? (
+            <Navigate to="/admin/entries" replace />
+          ) : (
+            <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+              <FavoritesPage />
+            </AppShell>
+          )
+        }
+      />
+      <Route
+        path="/insights"
+        element={
+          user?.role === "admin" ? (
+            <Navigate to="/admin/entries" replace />
+          ) : (
+            <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+              {user && <InsightsPage currentUser={user} />}
+            </AppShell>
+          )
         }
       />
       <Route
