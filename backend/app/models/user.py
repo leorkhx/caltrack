@@ -17,6 +17,15 @@ class BiologicalSex(str, enum.Enum):
     female = "female"
 
 
+class ActivityLevel(str, enum.Enum):
+    sedentary = "sedentary"
+    lightly_active = "lightly_active"
+    light = "light"
+    moderate = "moderate"
+    active = "active"
+    very_active = "very_active"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -33,6 +42,9 @@ class User(Base):
     weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sex: Mapped[Optional[BiologicalSex]] = mapped_column(Enum(BiologicalSex, native_enum=False, length=10), nullable=True)
+    activity_level: Mapped[Optional[ActivityLevel]] = mapped_column(
+        Enum(ActivityLevel, native_enum=False, length=20), nullable=True
+    )
 
     food_entries = relationship("FoodEntry", back_populates="user", cascade="all, delete-orphan")
     favorite_foods = relationship("FavoriteFood", back_populates="user", cascade="all, delete-orphan")

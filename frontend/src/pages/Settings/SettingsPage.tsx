@@ -1,11 +1,56 @@
 import { useState } from "react";
-import { Alert, Box, Button, Card, Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonBase, Card, Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
+import WeekendIcon from "@mui/icons-material/Weekend";
+import DirectionsWalkIcon from "@mui/icons-material/DirectionsWalk";
+import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import DirectionsRunIcon from "@mui/icons-material/DirectionsRun";
+import BoltIcon from "@mui/icons-material/Bolt";
 import { useUpdateMe } from "../../hooks/useUpdateMe";
 import { DIET_PRESETS, distributeMacros } from "./dietPresets";
 import { MacroBar } from "./MacroBar";
-import type { BiologicalSex, User } from "../../types";
+import type { ActivityLevel, BiologicalSex, User } from "../../types";
+
+const ACTIVITY_LEVELS: {
+  value: ActivityLevel;
+  label: string;
+  description: string;
+  multiplier: number;
+  icon: React.ReactElement;
+}[] = [
+  { value: "sedentary", label: "Sedentary", description: "Little to no exercise", multiplier: 1.2, icon: <WeekendIcon /> },
+  {
+    value: "lightly_active",
+    label: "Lightly active",
+    description: "Light exercise 1–2 days/week",
+    multiplier: 1.3,
+    icon: <DirectionsWalkIcon />,
+  },
+  {
+    value: "light",
+    label: "Light activity",
+    description: "Light exercise 3–4 days/week",
+    multiplier: 1.375,
+    icon: <DirectionsBikeIcon />,
+  },
+  {
+    value: "moderate",
+    label: "Moderately active",
+    description: "Moderate exercise 3–5 days/week",
+    multiplier: 1.55,
+    icon: <FitnessCenterIcon />,
+  },
+  { value: "active", label: "Active", description: "Hard exercise 6–7 days/week", multiplier: 1.725, icon: <DirectionsRunIcon /> },
+  {
+    value: "very_active",
+    label: "Very active",
+    description: "Very hard exercise or physical job",
+    multiplier: 1.9,
+    icon: <BoltIcon />,
+  },
+];
 
 const MIN_LIMIT = 800;
 const MAX_LIMIT = 10000;
@@ -39,6 +84,7 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
   const [weight, setWeight] = useState(toText(currentUser.weight_kg));
   const [age, setAge] = useState(toText(currentUser.age));
   const [sex, setSex] = useState<BiologicalSex | "">(currentUser.sex ?? "");
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel | "">(currentUser.activity_level ?? "");
   const [touched, setTouched] = useState(false);
   const { mutate, isPending, isSuccess, error, reset } = useUpdateMe();
 
@@ -74,7 +120,8 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
     height !== toText(currentUser.height_cm) ||
     weight !== toText(currentUser.weight_kg) ||
     age !== toText(currentUser.age) ||
-    sex !== (currentUser.sex ?? "");
+    sex !== (currentUser.sex ?? "") ||
+    activityLevel !== (currentUser.activity_level ?? "");
 
   const applyPreset = (presetId: string) => {
     setDietPreset(presetId);
@@ -96,6 +143,9 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
           (sex === "male" ? 5 : -161)
       )
     : null;
+  const activityMultiplier = ACTIVITY_LEVELS.find((a) => a.value === activityLevel)?.multiplier;
+  const previewMaintenance =
+    previewBmr !== null && activityMultiplier !== undefined ? Math.round(previewBmr * activityMultiplier) : null;
 
   const handleSave = () => {
     setTouched(true);
@@ -110,6 +160,7 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
       weight_kg: weight === "" ? null : Number(weight),
       age: age === "" ? null : Number(age),
       sex: sex === "" ? null : sex,
+      activity_level: activityLevel === "" ? null : activityLevel,
     });
   };
 
@@ -276,6 +327,67 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
               </TextField>
             </Stack>
 
+            <Box>
+              <Typography fontWeight={700} fontSize={14} sx={{ mb: 1 }}>
+                Activity level
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
+                  gap: 1.25,
+                }}
+              >
+                {ACTIVITY_LEVELS.map((a) => {
+                  const selected = activityLevel === a.value;
+                  return (
+                    <ButtonBase
+                      key={a.value}
+                      onClick={() => setActivityLevel(a.value)}
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: 0.75,
+                        p: 1.75,
+                        borderRadius: "16px",
+                        border: "1.5px solid",
+                        borderColor: selected ? "primary.main" : "rgba(23,26,40,0.08)",
+                        bgcolor: selected ? "rgba(79,79,208,0.08)" : "transparent",
+                        textAlign: "left",
+                        transition: "border-color 0.15s ease, background-color 0.15s ease",
+                        "&:hover": { borderColor: "primary.main" },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "11px",
+                          bgcolor: selected ? "primary.main" : "rgba(23,26,40,0.06)",
+                          color: selected ? "#fff" : "text.secondary",
+                          display: "grid",
+                          placeItems: "center",
+                          "& svg": { fontSize: 19 },
+                        }}
+                      >
+                        {a.icon}
+                      </Box>
+                      <Typography fontSize={13.5} fontWeight={700} color={selected ? "primary.main" : "text.primary"}>
+                        {a.label}
+                      </Typography>
+                      <Typography fontSize={11} color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                        {a.description}
+                      </Typography>
+                    </ButtonBase>
+                  );
+                })}
+              </Box>
+              <Typography fontSize={12} color="text.secondary" sx={{ mt: 1 }}>
+                Used to estimate your daily calorie needs on top of your resting BMR.
+              </Typography>
+            </Box>
+
             <Box
               sx={{
                 p: 2.5,
@@ -285,28 +397,40 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
               }}
             >
               {canComputeBmr ? (
-                <Stack direction="row" alignItems="center" gap={1.75}>
-                  <Box
-                    sx={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: "14px",
-                      bgcolor: "rgba(255,255,255,0.12)",
-                      color: "#ffb35c",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <LocalFireDepartmentIcon />
-                  </Box>
-                  <Box>
-                    <Typography fontSize={11} fontWeight={700} letterSpacing={0.6} textTransform="uppercase" sx={{ color: "rgba(255,255,255,0.6)" }}>
-                      Estimated basal metabolic rate
-                    </Typography>
-                    <Typography fontFamily="Roboto Mono, monospace" fontSize={22} fontWeight={500} sx={{ mt: 0.25 }}>
-                      {previewBmr} kcal/day
-                    </Typography>
-                  </Box>
+                <Stack direction="row" gap={3} flexWrap="wrap">
+                  <Stack direction="row" alignItems="center" gap={1.75}>
+                    <Box
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: "14px",
+                        bgcolor: "rgba(255,255,255,0.12)",
+                        color: "#ffb35c",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <LocalFireDepartmentIcon />
+                    </Box>
+                    <Box>
+                      <Typography fontSize={11} fontWeight={700} letterSpacing={0.6} textTransform="uppercase" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                        Basal metabolic rate
+                      </Typography>
+                      <Typography fontFamily="Roboto Mono, monospace" fontSize={22} fontWeight={500} sx={{ mt: 0.25 }}>
+                        {previewBmr} kcal/day
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  {previewMaintenance !== null && (
+                    <Box sx={{ borderLeft: "1px solid rgba(255,255,255,0.12)", pl: 3 }}>
+                      <Typography fontSize={11} fontWeight={700} letterSpacing={0.6} textTransform="uppercase" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                        Estimated daily calorie needs
+                      </Typography>
+                      <Typography fontFamily="Roboto Mono, monospace" fontSize={22} fontWeight={500} sx={{ mt: 0.25 }}>
+                        {previewMaintenance} kcal/day
+                      </Typography>
+                    </Box>
+                  )}
                 </Stack>
               ) : (
                 <Typography fontSize={13}>

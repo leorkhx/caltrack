@@ -2,7 +2,16 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from app.models.user import BiologicalSex, UserRole
+from app.models.user import ActivityLevel, BiologicalSex, UserRole
+
+ACTIVITY_MULTIPLIERS: dict[ActivityLevel, float] = {
+    ActivityLevel.sedentary: 1.2,
+    ActivityLevel.lightly_active: 1.3,
+    ActivityLevel.light: 1.375,
+    ActivityLevel.moderate: 1.55,
+    ActivityLevel.active: 1.725,
+    ActivityLevel.very_active: 1.9,
+}
 
 MIN_DAILY_LIMIT = 800
 MAX_DAILY_LIMIT = 10000
@@ -30,6 +39,7 @@ class UserOut(BaseModel):
     weight_kg: Optional[float] = None
     age: Optional[int] = None
     sex: Optional[BiologicalSex] = None
+    activity_level: Optional[ActivityLevel] = None
 
     @computed_field  # type: ignore[misc]
     @property
@@ -41,6 +51,14 @@ class UserOut(BaseModel):
         base += 5 if self.sex == BiologicalSex.male else -161
         return round(base)
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def maintenance_calories_kcal(self) -> Optional[int]:
+        """Estimated daily calories to maintain weight (BMR x activity multiplier)."""
+        if self.basal_metabolic_rate_kcal is None or self.activity_level is None:
+            return None
+        return round(self.basal_metabolic_rate_kcal * ACTIVITY_MULTIPLIERS[self.activity_level])
+
 
 class UserSettingsUpdate(BaseModel):
     daily_calorie_limit: Optional[int] = Field(None, ge=MIN_DAILY_LIMIT, le=MAX_DAILY_LIMIT)
@@ -51,3 +69,4 @@ class UserSettingsUpdate(BaseModel):
     weight_kg: Optional[float] = Field(None, ge=MIN_WEIGHT_KG, le=MAX_WEIGHT_KG)
     age: Optional[int] = Field(None, ge=MIN_AGE, le=MAX_AGE)
     sex: Optional[BiologicalSex] = None
+    activity_level: Optional[ActivityLevel] = None

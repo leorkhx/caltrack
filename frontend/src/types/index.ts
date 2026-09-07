@@ -1,5 +1,6 @@
 export type UserRole = "user" | "admin";
 export type BiologicalSex = "male" | "female";
+export type ActivityLevel = "sedentary" | "lightly_active" | "light" | "moderate" | "active" | "very_active";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface User {
@@ -15,7 +16,9 @@ export interface User {
   weight_kg: number | null;
   age: number | null;
   sex: BiologicalSex | null;
+  activity_level: ActivityLevel | null;
   basal_metabolic_rate_kcal: number | null;
+  maintenance_calories_kcal: number | null;
 }
 
 export interface UserSettingsInput {
@@ -27,6 +30,7 @@ export interface UserSettingsInput {
   weight_kg?: number | null;
   age?: number | null;
   sex?: BiologicalSex | null;
+  activity_level?: ActivityLevel | null;
 }
 
 export interface FoodEntry {
