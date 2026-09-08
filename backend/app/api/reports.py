@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,5 +13,10 @@ router = APIRouter(prefix="/api/admin", tags=["reports"])
 
 
 @router.get("/reports", response_model=ReportsOut)
-def get_reports(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
-    return build_reports(db)
+def get_reports(
+    days: Optional[int] = Query(7, ge=1, le=3650),
+    all_time: bool = Query(False, alias="all"),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    return build_reports(db, days=None if all_time else days)

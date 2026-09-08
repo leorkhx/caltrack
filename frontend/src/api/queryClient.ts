@@ -27,6 +27,6 @@ export const queryKeys = {
     page?: number;
     page_size?: number;
   }) => ["admin-entries", params] as const,
-  reports: ["reports"] as const,
+  reports: (params: { days?: number; all?: boolean }) => ["reports", params] as const,
   favorites: ["favorites"] as const,
 };

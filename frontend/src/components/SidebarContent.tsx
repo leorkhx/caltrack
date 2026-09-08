@@ -83,7 +83,7 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
       path: "/admin/reports",
       visible: isAdmin,
       onHover: () => {
-        queryClient.prefetchQuery({ queryKey: queryKeys.reports, queryFn: fetchReports });
+        queryClient.prefetchQuery({ queryKey: queryKeys.reports({ days: 7 }), queryFn: () => fetchReports({ days: 7 }) });
       },
     },
   ].filter((n) => n.visible);

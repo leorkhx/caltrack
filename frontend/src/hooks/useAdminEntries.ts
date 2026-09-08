@@ -17,11 +17,12 @@ export function useAdminUsers() {
   });
 }
 
-export function useAdminEntries(params: AdminListParams) {
+export function useAdminEntries(params: AdminListParams, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.adminEntries(params),
     queryFn: () => fetchAllEntries(params),
     placeholderData: (previous) => previous,
+    enabled: options.enabled,
   });
 }
 

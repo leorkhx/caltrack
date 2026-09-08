@@ -123,13 +123,13 @@ export interface FoodSuggestion {
   favoriteId?: number;
 }
 
-export interface WeekComparison {
-  last_7_days_count: number;
-  previous_7_days_count: number;
-  last_7_days_from: string;
-  last_7_days_to: string;
-  previous_7_days_from: string;
-  previous_7_days_to: string;
+export interface PeriodComparison {
+  current_count: number;
+  previous_count: number;
+  current_from: string;
+  current_to: string;
+  previous_from: string;
+  previous_to: string;
 }
 
 export interface UserAverage {
@@ -139,10 +139,18 @@ export interface UserAverage {
   average_daily_calories: number;
 }
 
+export interface DailyTotal {
+  date: string;
+  total_calories: number;
+  entries_count: number;
+}
+
 export interface ReportsData {
-  week_comparison: WeekComparison;
+  period_days: number | null;
+  period_comparison: PeriodComparison;
   per_user_averages: UserAverage[];
   overall_average_daily_calories: number;
+  daily_totals: DailyTotal[];
 }
 
 export interface ApiFieldError {

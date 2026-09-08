@@ -32,7 +32,12 @@ export async function deleteEntryAsAdmin(id: number): Promise<void> {
   await apiClient.delete(`/api/admin/food-entries/${id}`);
 }
 
-export async function fetchReports(): Promise<ReportsData> {
-  const { data } = await apiClient.get<ReportsData>("/api/admin/reports");
+export interface ReportsParams {
+  days?: number;
+  all?: boolean;
+}
+
+export async function fetchReports(params: ReportsParams = {}): Promise<ReportsData> {
+  const { data } = await apiClient.get<ReportsData>("/api/admin/reports", { params });
   return data;
 }

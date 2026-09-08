@@ -1,13 +1,15 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
-class WeekComparison(BaseModel):
-    last_7_days_count: int
-    previous_7_days_count: int
-    last_7_days_from: str
-    last_7_days_to: str
-    previous_7_days_from: str
-    previous_7_days_to: str
+class PeriodComparison(BaseModel):
+    current_count: int
+    previous_count: int
+    current_from: str
+    current_to: str
+    previous_from: str
+    previous_to: str
 
 
 class UserAverage(BaseModel):
@@ -17,7 +19,15 @@ class UserAverage(BaseModel):
     average_daily_calories: float
 
 
+class DailyTotal(BaseModel):
+    date: str
+    total_calories: int
+    entries_count: int
+
+
 class ReportsOut(BaseModel):
-    week_comparison: WeekComparison
+    period_days: Optional[int]  # None means all-time
+    period_comparison: PeriodComparison
     per_user_averages: list[UserAverage]
     overall_average_daily_calories: float
+    daily_totals: list[DailyTotal]

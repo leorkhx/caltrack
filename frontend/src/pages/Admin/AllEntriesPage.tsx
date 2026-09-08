@@ -2,6 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import ShieldIcon from "@mui/icons-material/Shield";
 import PersonIcon from "@mui/icons-material/Person";
+import GroupIcon from "@mui/icons-material/Group";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import {
@@ -22,10 +25,12 @@ import { useAdminEntries, useAdminEntryMutations, useAdminUsers } from "../../ho
 import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
+import { StatCard } from "../../components/StatCard";
 import { todayIso } from "../../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput } from "../../types";
 
 const PAGE_SIZE = 10;
+const STATS_PAGE_SIZE = 200;
 
 const QUICK_RANGES = [
   { label: "7d", days: 7 },
@@ -83,10 +88,51 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
     page,
     page_size: PAGE_SIZE,
   });
+  const { data: statsData } = useAdminEntries({
+    user_id: selectedUserId ?? undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    page: 1,
+    page_size: STATS_PAGE_SIZE,
+  });
+  const last7From = isoDaysAgo(6);
+  const last7To = todayIso();
+  const { data: selectedUserLast7Data } = useAdminEntries(
+    { user_id: selectedUserId ?? undefined, date_from: last7From, date_to: last7To, page: 1, page_size: STATS_PAGE_SIZE },
+    { enabled: selectedUserId !== null }
+  );
   const { create, update, remove } = useAdminEntryMutations();
 
   const rawEntries = entriesData?.items ?? [];
   const total = entriesData?.total ?? 0;
+
+  const stats = useMemo(() => {
+    const statsEntries = statsData?.items ?? [];
+    const buckets = new Map<string, { userId: number; total: number; limit: number }>();
+    let earliest: string | null = null;
+    statsEntries.forEach((e) => {
+      const day = e.consumed_at.slice(0, 10);
+      if (earliest === null || day < earliest) earliest = day;
+      const key = `${e.user_id}_${day}`;
+      const bucket = buckets.get(key) ?? { userId: e.user_id, total: 0, limit: e.user_daily_limit };
+      bucket.total += e.calories;
+      buckets.set(key, bucket);
+    });
+    const bucketList = Array.from(buckets.values());
+    const avgPerLoggedDay = bucketList.length
+      ? Math.round(bucketList.reduce((sum, b) => sum + b.total, 0) / bucketList.length)
+      : 0;
+    const daysOverLimit = bucketList.filter((b) => b.total > b.limit).length;
+    const activeUsers = new Set(statsEntries.map((e) => e.user_id)).size;
+    return { avgPerLoggedDay, daysOverLimit, activeUsers, since: dateFrom || earliest };
+  }, [statsData, dateFrom]);
+
+  const selectedUserLast7Avg = useMemo(() => {
+    if (selectedUserId === null) return 0;
+    const items = selectedUserLast7Data?.items ?? [];
+    const total = items.reduce((sum, e) => sum + e.calories, 0);
+    return Math.round(total / 7);
+  }, [selectedUserId, selectedUserLast7Data]);
 
   const toggleFilterOption = (option: EntryFilterOption) => {
     setFilterOptions((prev) => {
@@ -204,6 +250,51 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
           New entry
         </Button>
       </Stack>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 2.5,
+          mb: 3.5,
+        }}
+      >
+        {selectedUserId === null ? (
+          <StatCard
+            icon={<GroupIcon fontSize="small" />}
+            label="Active users"
+            value={stats.activeUsers}
+            note="Logged at least one entry"
+          />
+        ) : (
+          <StatCard
+            icon={<GroupIcon fontSize="small" />}
+            label="Avg calories / day (7d)"
+            value={selectedUserLast7Avg}
+            note={`For ${loggableUsers.find((u) => u.id === selectedUserId)?.name ?? "this user"}`}
+          />
+        )}
+        <StatCard
+          icon={<MonitorHeartIcon fontSize="small" />}
+          label="Avg calories / logged day"
+          value={stats.avgPerLoggedDay}
+          note="Averaged across every user-day with an entry"
+        />
+        <StatCard
+          icon={<WarningAmberIcon fontSize="small" />}
+          label="Days over limit"
+          value={stats.daysOverLimit}
+          tint="rgba(229,72,77,0.12)"
+          iconColor="#c93a3f"
+          note={
+            stats.daysOverLimit === 0
+              ? "Clean streak so far — keep it up"
+              : stats.since
+                ? `Since ${new Date(`${stats.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                : undefined
+          }
+        />
+      </Box>
 
       <DashboardFilterNav
         dateFrom={dateFrom}
