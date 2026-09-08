@@ -153,6 +153,21 @@ export interface ReportsData {
   daily_totals: DailyTotal[];
 }
 
+export interface TopFood {
+  food_name: string;
+  entries_count: number;
+  total_calories: number;
+  average_calories: number;
+}
+
+export interface TopFoodsData {
+  period_days: number | null;
+  items: TopFood[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export interface ApiFieldError {
   loc: (string | number)[];
   msg: string;

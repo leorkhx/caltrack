@@ -7,12 +7,13 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import InsightsIcon from "@mui/icons-material/Insights";
 import StarIcon from "@mui/icons-material/Star";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Box, ButtonBase, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
-import { fetchAllEntries, fetchAllUsers, fetchReports } from "../api/admin";
+import { fetchAllEntries, fetchAllUsers, fetchReports, fetchTopFoods } from "../api/admin";
 import { queryKeys } from "../api/queryClient";
 import type { User } from "../types";
 
@@ -84,6 +85,18 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
       visible: isAdmin,
       onHover: () => {
         queryClient.prefetchQuery({ queryKey: queryKeys.reports({ days: 7 }), queryFn: () => fetchReports({ days: 7 }) });
+      },
+    },
+    {
+      label: "Top foods",
+      icon: <RestaurantMenuIcon fontSize="small" />,
+      path: "/admin/foods",
+      visible: isAdmin,
+      onHover: () => {
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.topFoods({ all: true, page: 1, page_size: 20 }),
+          queryFn: () => fetchTopFoods({ all: true, page: 1, page_size: 20 }),
+        });
       },
     },
   ].filter((n) => n.visible);

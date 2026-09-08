@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.food_entry import FoodEntry
 from app.models.user import User, UserRole
 from app.schemas.report import DailyTotal, PeriodComparison, ReportsOut, UserAverage
+from app.schemas.top_food import TopFood, TopFoodsOut
 
 
 def _count_in_window(db: Session, start: date, end: date, user_id: int | None = None) -> int:
@@ -111,3 +112,58 @@ def build_reports(db: Session, today: date | None = None, days: Optional[int] = 
         overall_average_daily_calories=overall_avg,
         daily_totals=daily_totals,
     )
+
+
+def build_top_foods(
+    db: Session,
+    today: date | None = None,
+    days: Optional[int] = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> TopFoodsOut:
+    today = today or date.today()
+
+    if days is None:
+        start = _earliest_entry_date(db)
+        end = today
+    else:
+        end = today
+        start = end - timedelta(days=days - 1)
+
+    name_key = func.lower(func.trim(FoodEntry.food_name))
+    base_query = (
+        db.query(
+            name_key.label("key"),
+            func.min(FoodEntry.food_name).label("food_name"),
+            func.count(FoodEntry.id).label("entries_count"),
+            func.coalesce(func.sum(FoodEntry.calories), 0).label("total_calories"),
+        )
+        .join(User, User.id == FoodEntry.user_id)
+        .filter(
+            User.role == UserRole.user,
+            FoodEntry.consumed_at >= datetime.combine(start, time.min),
+            FoodEntry.consumed_at <= datetime.combine(end, time.max),
+        )
+        .group_by(name_key)
+    )
+
+    total = base_query.count()
+
+    rows = (
+        base_query.order_by(func.count(FoodEntry.id).desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    items = [
+        TopFood(
+            food_name=row.food_name,
+            entries_count=row.entries_count,
+            total_calories=row.total_calories,
+            average_calories=round(row.total_calories / row.entries_count, 1) if row.entries_count else 0.0,
+        )
+        for row in rows
+    ]
+
+    return TopFoodsOut(period_days=days, items=items, total=total, page=page, page_size=page_size)

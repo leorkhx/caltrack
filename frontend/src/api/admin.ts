@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { AdminFoodEntry, FoodEntryInput, PaginatedAdminFoodEntries, ReportsData, User } from "../types";
+import type { AdminFoodEntry, FoodEntryInput, PaginatedAdminFoodEntries, ReportsData, TopFoodsData, User } from "../types";
 import type { DateRangeParams } from "./foodEntries";
 
 export interface AdminListParams extends DateRangeParams {
@@ -39,5 +39,17 @@ export interface ReportsParams {
 
 export async function fetchReports(params: ReportsParams = {}): Promise<ReportsData> {
   const { data } = await apiClient.get<ReportsData>("/api/admin/reports", { params });
+  return data;
+}
+
+export interface TopFoodsParams {
+  days?: number;
+  all?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export async function fetchTopFoods(params: TopFoodsParams = {}): Promise<TopFoodsData> {
+  const { data } = await apiClient.get<TopFoodsData>("/api/admin/foods/top", { params });
   return data;
 }

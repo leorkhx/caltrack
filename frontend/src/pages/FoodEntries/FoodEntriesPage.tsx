@@ -43,7 +43,7 @@ const QUICK_RANGES = [
   { label: "Custom", days: null },
 ];
 
-const DAYS_PER_PAGE = 7;
+const DAYS_PER_PAGE = 14;
 
 interface FoodEntriesPageProps {
   currentUser: User;

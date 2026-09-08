@@ -30,7 +30,7 @@ import { StatCard } from "../../components/StatCard";
 import { todayIso } from "../../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput } from "../../types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 const STATS_PAGE_SIZE = 200;
 
 const QUICK_RANGES = [

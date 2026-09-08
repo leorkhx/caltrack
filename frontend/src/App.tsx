@@ -10,6 +10,7 @@ import { SignInPage } from "./pages/SignIn/SignInPage";
 import { FoodEntriesPage } from "./pages/FoodEntries/FoodEntriesPage";
 import { AllEntriesPage } from "./pages/Admin/AllEntriesPage";
 import { ReportsPage } from "./pages/Admin/ReportsPage";
+import { TopFoodsPage } from "./pages/Admin/TopFoodsPage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
 import { FavoritesPage } from "./pages/Favorites/FavoritesPage";
 import { InsightsPage } from "./pages/Insights/InsightsPage";
@@ -96,6 +97,16 @@ function AppRoutes() {
           <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
             <RequireAdmin user={user} loading={loading}>
               <ReportsPage />
+            </RequireAdmin>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/admin/foods"
+        element={
+          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+            <RequireAdmin user={user} loading={loading}>
+              <TopFoodsPage />
             </RequireAdmin>
           </AppShell>
         }

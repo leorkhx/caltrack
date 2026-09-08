@@ -13,7 +13,7 @@ import { FavoritesFilterNav, type FavoriteFilterOption, type FavoriteSortMode } 
 import { formatQuantity } from "../../utils/quantityUnits";
 import type { FavoriteFood } from "../../types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 export function FavoritesPage() {
   const { data: favorites = [], isLoading } = useFavorites();
