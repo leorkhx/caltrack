@@ -116,7 +116,14 @@ export function CalorieRing({ total, limit, headline, macros }: CalorieRingProps
                     {m.label}
                   </Typography>
                   <Box sx={{ flex: 1, height: 6, borderRadius: "4px", bgcolor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
-                    <Box sx={{ height: "100%", width: `${m.targetGrams ? macroPct * 100 : 0}%`, bgcolor: m.color, borderRadius: "4px" }} />
+                    <Box
+                      sx={{
+                        height: "100%",
+                        width: `${m.targetGrams ? macroPct * 100 : 100}%`,
+                        bgcolor: m.targetGrams ? m.color : "rgba(255,255,255,0.3)",
+                        borderRadius: "4px",
+                      }}
+                    />
                   </Box>
                   <Typography fontFamily="Roboto Mono, monospace" fontSize={11.5} fontWeight={500} sx={{ color: "rgba(255,255,255,0.85)", minWidth: 62, textAlign: "right" }}>
                     {m.grams}g{m.targetGrams ? ` / ${m.targetGrams}g` : ""}

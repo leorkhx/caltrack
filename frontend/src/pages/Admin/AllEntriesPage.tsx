@@ -25,6 +25,7 @@ import { useAdminEntries, useAdminEntryMutations, useAdminUsers } from "../../ho
 import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StatCard } from "../../components/StatCard";
 import { todayIso } from "../../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput } from "../../types";
@@ -70,6 +71,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<AdminFoodEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminFoodEntry | null>(null);
   const [search, setSearch] = useState("");
   const [filterOptions, setFilterOptions] = useState<EntryFilterOption[]>(["all"]);
   const [sortMode, setSortMode] = useState<EntrySortMode>("date_desc");
@@ -203,8 +205,12 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   };
 
   const handleDelete = (entry: AdminFoodEntry) => {
-    if (!window.confirm(`Delete "${entry.food_name}" for ${entry.user_name}?`)) return;
-    remove.mutate(entry.id);
+    setDeleteTarget(entry);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) remove.mutate(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   const setQuickRange = (days: number | null) => {
@@ -414,6 +420,17 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
         initialEntry={editingEntry}
         getUserLimit={(uid) => userLimitMap.get(uid) ?? 2100}
         computeExistingTotal={computeExistingTotal}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete this entry?"
+        description={
+          deleteTarget ? `"${deleteTarget.food_name}" for ${deleteTarget.user_name} will be permanently removed.` : undefined
+        }
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </Box>
   );

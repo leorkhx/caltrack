@@ -1,12 +1,15 @@
-import { useCallback, useMemo, useState } from "react";
-import { Box, Button, Stack, Typography, Card, CircularProgress } from "@mui/material";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Box, Button, Stack, Typography, Card, CircularProgress, IconButton } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import NoMealsIcon from "@mui/icons-material/NoMeals";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { CalorieRing } from "../../components/CalorieRing";
 import { StatCard } from "../../components/StatCard";
 import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useMyEntries, useMyEntryMutations } from "../../hooks/useMyEntries";
@@ -40,6 +43,8 @@ const QUICK_RANGES = [
   { label: "Custom", days: null },
 ];
 
+const DAYS_PER_PAGE = 7;
+
 interface FoodEntriesPageProps {
   currentUser: User;
 }
@@ -50,9 +55,11 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
   const [rangeDays, setRangeDays] = useState<number | null>(7);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FoodEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FoodEntry | null>(null);
   const [search, setSearch] = useState("");
   const [filterOptions, setFilterOptions] = useState<EntryFilterOption[]>(["all"]);
   const [sortMode, setSortMode] = useState<EntrySortMode>("date_desc");
+  const [page, setPage] = useState(1);
 
   const toggleFilterOption = (option: EntryFilterOption) => {
     setFilterOptions((prev) => {
@@ -164,15 +171,21 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
 
     if (sortMode === "date_asc") {
       groups = [...groups].reverse();
-    } else if (sortMode === "calories_desc" || sortMode === "calories_asc") {
-      groups = groups.map((g) => ({
-        ...g,
-        list: [...g.list].sort((a, b) => (sortMode === "calories_desc" ? b.calories - a.calories : a.calories - b.calories)),
-      }));
+    } else if (sortMode === "calories_desc") {
+      groups = [...groups].sort((a, b) => b.total - a.total);
+    } else if (sortMode === "calories_asc") {
+      groups = [...groups].sort((a, b) => a.total - b.total);
     }
 
     return groups;
   }, [entries, limit, today, search, filterOptions, sortMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterOptions, sortMode, dateFrom, dateTo]);
+
+  const totalDayPages = Math.max(1, Math.ceil(dayGroups.length / DAYS_PER_PAGE));
+  const visibleDayGroups = dayGroups.slice((page - 1) * DAYS_PER_PAGE, page * DAYS_PER_PAGE);
 
   const computeExistingTotal = useCallback(
     (_userId: number, dateIso: string, excludeEntryId: number | null) => {
@@ -191,8 +204,13 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
     }
   };
 
-  const handleDelete = (id: number) => {
-    remove.mutate(id);
+  const handleDelete = (entry: FoodEntry) => {
+    setDeleteTarget(entry);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) remove.mutate(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   const setQuickRange = (days: number | null) => {
@@ -323,7 +341,7 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
           </Typography>
         </Card>
       ) : (
-        dayGroups.map((group) => (
+        visibleDayGroups.map((group) => (
           <Card key={group.date} sx={{ mb: 2.5, overflow: "hidden" }}>
             <Stack direction="row" alignItems="center" gap={2} sx={{ p: "20px 24px 18px" }}>
               <Box>
@@ -411,7 +429,7 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
                           setEditing(entry);
                           setDialogOpen(true);
                         }}
-                        onDelete={() => handleDelete(entry.id)}
+                        onDelete={() => handleDelete(entry)}
                       />
                     ))}
                   </Box>
@@ -420,6 +438,22 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
             </Stack>
           </Card>
         ))
+      )}
+
+      {!loading && dayGroups.length > 0 && totalDayPages > 1 && (
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, py: 1.5 }}>
+          <Typography fontSize={13} fontWeight={600} color="text.secondary">
+            Page {page} of {totalDayPages}
+          </Typography>
+          <Stack direction="row" gap={1}>
+            <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeftIcon />
+            </IconButton>
+            <IconButton size="small" disabled={page >= totalDayPages} onClick={() => setPage((p) => p + 1)}>
+              <ChevronRightIcon />
+            </IconButton>
+          </Stack>
+        </Stack>
       )}
 
       <EntryDialog
@@ -431,6 +465,15 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
         initialEntry={editing}
         getUserLimit={() => limit}
         computeExistingTotal={computeExistingTotal}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete this entry?"
+        description={deleteTarget ? `"${deleteTarget.food_name}" will be permanently removed.` : undefined}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </Box>
   );

@@ -127,9 +127,13 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
-            {user && <SettingsPage currentUser={user} />}
-          </AppShell>
+          user?.role === "admin" ? (
+            <Navigate to="/admin/entries" replace />
+          ) : (
+            <AppShell user={user} loading={loading} onSignOut={handleSignOut}>
+              {user && <SettingsPage currentUser={user} />}
+            </AppShell>
+          )
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

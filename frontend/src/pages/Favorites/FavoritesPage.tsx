@@ -1,15 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Card, CircularProgress, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography } from "@mui/material";
 import StarIcon from "@mui/icons-material/Star";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useFavoriteMutations, useFavorites } from "../../hooks/useFavorites";
 import { FavoriteDialog } from "./FavoriteDialog";
 import { FavoritesFilterNav, type FavoriteFilterOption, type FavoriteSortMode } from "./FavoritesFilterNav";
 import { formatQuantity } from "../../utils/quantityUnits";
 import type { FavoriteFood } from "../../types";
+
+const PAGE_SIZE = 10;
 
 export function FavoritesPage() {
   const { data: favorites = [], isLoading } = useFavorites();
@@ -21,6 +25,7 @@ export function FavoritesPage() {
   const [search, setSearch] = useState("");
   const [filterOptions, setFilterOptions] = useState<FavoriteFilterOption[]>(["all"]);
   const [sortMode, setSortMode] = useState<FavoriteSortMode>("newest");
+  const [page, setPage] = useState(1);
 
   const toggleFilterOption = (option: FavoriteFilterOption) => {
     setFilterOptions((prev) => {
@@ -71,6 +76,13 @@ export function FavoritesPage() {
     }
     return list;
   }, [favorites, search, filterOptions, sortMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterOptions, sortMode]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleFavorites.length / PAGE_SIZE));
+  const pagedFavorites = visibleFavorites.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const closeMenu = () => {
     setMenuAnchor(null);
@@ -141,7 +153,7 @@ export function FavoritesPage() {
         </Card>
       ) : (
         <Card sx={{ p: 1.5 }}>
-          {visibleFavorites.map((f) => (
+          {pagedFavorites.map((f) => (
             <Stack
               key={f.id}
               direction="row"
@@ -184,6 +196,22 @@ export function FavoritesPage() {
             </Stack>
           ))}
         </Card>
+      )}
+
+      {!isLoading && visibleFavorites.length > 0 && totalPages > 1 && (
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, py: 1.5 }}>
+          <Typography fontSize={13} fontWeight={600} color="text.secondary">
+            Page {page} of {totalPages}
+          </Typography>
+          <Stack direction="row" gap={1}>
+            <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeftIcon />
+            </IconButton>
+            <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <ChevronRightIcon />
+            </IconButton>
+          </Stack>
+        </Stack>
       )}
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>

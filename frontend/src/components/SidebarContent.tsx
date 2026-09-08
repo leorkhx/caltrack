@@ -185,18 +185,20 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
 
       {collapsed ? (
         <Stack gap={0.75} alignItems="center" sx={{ mt: "auto" }}>
-          <Tooltip title="Settings" placement="right">
-            <IconButton
-              size="small"
-              onClick={() => {
-                navigate("/settings");
-                onNavigate?.();
-              }}
-              sx={RAIL_HOVER_SX}
-            >
-              <SettingsIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
+          {!isAdmin && (
+            <Tooltip title="Settings" placement="right">
+              <IconButton
+                size="small"
+                onClick={() => {
+                  navigate("/settings");
+                  onNavigate?.();
+                }}
+                sx={RAIL_HOVER_SX}
+              >
+                <SettingsIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="Sign out" placement="right">
             <IconButton size="small" onClick={onSignOut} sx={RAIL_HOVER_SX}>
               <LogoutIcon sx={{ fontSize: 18 }} />
@@ -211,18 +213,20 @@ export function SidebarContent({ currentUser, onSignOut, onNavigate, collapsed =
                 {currentUser ? currentUser.name : "—"}
               </Typography>
               <Stack direction="row" gap={0.5}>
-                <Tooltip title="Settings">
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      navigate("/settings");
-                      onNavigate?.();
-                    }}
-                    sx={{ borderRadius: "10px" }}
-                  >
-                    <SettingsIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
+                {!isAdmin && (
+                  <Tooltip title="Settings">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        navigate("/settings");
+                        onNavigate?.();
+                      }}
+                      sx={{ borderRadius: "10px" }}
+                    >
+                      <SettingsIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <Tooltip title="Sign out">
                   <IconButton size="small" onClick={onSignOut} sx={{ borderRadius: "10px" }}>
                     <LogoutIcon sx={{ fontSize: 18 }} />

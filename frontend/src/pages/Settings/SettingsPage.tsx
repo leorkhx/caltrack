@@ -197,7 +197,7 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
           </Typography>
           <Stack direction="row" gap={4} flexWrap={{ xs: "wrap", 1025: "nowrap" }}>
             <Stack gap={2.5} sx={{ flex: "1 1 320px" }}>
-              {previewMaintenance !== null && (
+              {previewMaintenance !== null && Number(dailyLimit) !== previewMaintenance && (
                 <Stack
                   direction="row"
                   alignItems="center"
