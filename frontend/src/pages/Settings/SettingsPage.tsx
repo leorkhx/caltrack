@@ -197,6 +197,33 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
           </Typography>
           <Stack direction="row" gap={4} flexWrap={{ xs: "wrap", 1025: "nowrap" }}>
             <Stack gap={2.5} sx={{ flex: "1 1 320px" }}>
+              {previewMaintenance !== null && (
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  gap={1.25}
+                  sx={{ p: "10px 14px", borderRadius: "14px", bgcolor: "rgba(79,79,208,0.08)" }}
+                >
+                  <LocalFireDepartmentIcon sx={{ fontSize: 18, color: "primary.main" }} />
+                  <Typography fontSize={12.5} fontWeight={600} color="text.secondary" sx={{ flex: 1 }}>
+                    Based on your body metrics and activity level, we estimate you need{" "}
+                    <Typography component="span" fontWeight={800} color="text.primary">
+                      {previewMaintenance} kcal/day
+                    </Typography>
+                    .
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setDailyLimit(String(previewMaintenance));
+                      setDietPreset("custom");
+                    }}
+                    sx={{ flex: "none", textTransform: "none", fontWeight: 700 }}
+                  >
+                    Use this
+                  </Button>
+                </Stack>
+              )}
               <TextField
                 label="Daily calorie limit"
                 value={dailyLimit}

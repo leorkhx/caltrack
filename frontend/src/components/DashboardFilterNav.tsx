@@ -25,6 +25,9 @@ interface DashboardFilterNavProps {
   onToggleFilterOption: (option: EntryFilterOption) => void;
   sortMode: EntrySortMode;
   onSortModeChange: (mode: EntrySortMode) => void;
+  /** Optional extra control (e.g. a user picker on the admin view) rendered
+   * right after the quick-range buttons. */
+  extraControl?: React.ReactNode;
 }
 
 const DATE_FIELD_SX = {
@@ -65,6 +68,7 @@ export function DashboardFilterNav({
   onToggleFilterOption,
   sortMode,
   onSortModeChange,
+  extraControl,
 }: DashboardFilterNavProps) {
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [sortAnchor, setSortAnchor] = useState<HTMLElement | null>(null);
@@ -104,6 +108,8 @@ export function DashboardFilterNav({
           </Button>
         ))}
       </Stack>
+
+      {extraControl}
 
       <Stack
         direction="row"
