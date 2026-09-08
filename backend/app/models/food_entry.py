@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -16,6 +16,20 @@ class MealType(str, enum.Enum):
     snack = "snack"
 
 
+class QuantityUnit(str, enum.Enum):
+    g = "g"
+    kg = "kg"
+    ml = "ml"
+    l = "l"
+    oz = "oz"
+    lb = "lb"
+    cup = "cup"
+    tbsp = "tbsp"
+    tsp = "tsp"
+    piece = "piece"
+    serving = "serving"
+
+
 class FoodEntry(Base):
     __tablename__ = "food_entries"
 
@@ -23,6 +37,10 @@ class FoodEntry(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     food_name: Mapped[str] = mapped_column(String(200), nullable=False)
     calories: Mapped[int] = mapped_column(Integer, nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    unit: Mapped[QuantityUnit] = mapped_column(
+        Enum(QuantityUnit, native_enum=False, length=20), nullable=False, default=QuantityUnit.serving
+    )
     meal_type: Mapped[MealType] = mapped_column(
         Enum(MealType, native_enum=False, length=20), nullable=False, default=MealType.snack
     )

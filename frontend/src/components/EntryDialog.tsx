@@ -14,7 +14,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers";
+import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker";
 import dayjs, { type Dayjs } from "dayjs";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -26,7 +27,8 @@ import { searchFoods } from "../api/foods";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useFavorites, useFavoriteMutations } from "../hooks/useFavorites";
 import { validateEntryForm, hasErrors, type EntryFormErrors } from "../utils/validation";
-import type { FoodEntry, FoodEntryInput, FoodSuggestion, MealType, User } from "../types";
+import { QUANTITY_UNITS } from "../utils/quantityUnits";
+import type { FoodEntry, FoodEntryInput, FoodSuggestion, MealType, QuantityUnit, User } from "../types";
 
 interface EntryDialogProps {
   open: boolean;
@@ -92,6 +94,8 @@ export function EntryDialog({
   const [userId, setUserId] = useState<number>(currentUserId);
   const [foodName, setFoodName] = useState("");
   const [caloriesText, setCaloriesText] = useState("");
+  const [quantityText, setQuantityText] = useState("1");
+  const [unit, setUnit] = useState<QuantityUnit>("serving");
   const [mealType, setMealType] = useState<MealType>("snack");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
@@ -120,6 +124,8 @@ export function EntryDialog({
       setUserId(initialEntry.user_id);
       setFoodName(initialEntry.food_name);
       setCaloriesText(String(initialEntry.calories));
+      setQuantityText(String(initialEntry.quantity));
+      setUnit(initialEntry.unit);
       setMealType(initialEntry.meal_type);
       setProtein(initialEntry.protein_g === null ? "" : String(initialEntry.protein_g));
       setCarbs(initialEntry.carbs_g === null ? "" : String(initialEntry.carbs_g));
@@ -133,6 +139,8 @@ export function EntryDialog({
       setUserId(currentUserId);
       setFoodName("");
       setCaloriesText("");
+      setQuantityText("1");
+      setUnit("serving");
       setMealType(defaultMealType());
       setProtein("");
       setCarbs("");
@@ -201,6 +209,8 @@ export function EntryDialog({
   const selectSuggestion = (value: FoodSuggestion) => {
     setFoodName(value.name);
     setCaloriesText(String(value.calories));
+    setQuantityText("1");
+    setUnit("serving");
     setProtein(value.protein_g != null ? String(value.protein_g) : "");
     setCarbs(value.carbs_g != null ? String(value.carbs_g) : "");
     setFat(value.fat_g != null ? String(value.fat_g) : "");
@@ -211,6 +221,8 @@ export function EntryDialog({
   const selectManualName = () => {
     setFoodName(query.trim());
     setCaloriesText("");
+    setQuantityText("1");
+    setUnit("serving");
     setProtein("");
     setCarbs("");
     setFat("");
@@ -219,8 +231,8 @@ export function EntryDialog({
   };
 
   const errors: EntryFormErrors = useMemo(
-    () => validateEntryForm({ foodName, caloriesText, date, time }),
-    [foodName, caloriesText, date, time]
+    () => validateEntryForm({ foodName, caloriesText, quantityText, date, time }),
+    [foodName, caloriesText, quantityText, date, time]
   );
 
   const limit = getUserLimit(userId);
@@ -242,6 +254,8 @@ export function EntryDialog({
       const input: FoodEntryInput = {
         food_name: foodName.trim(),
         calories: Number(caloriesText),
+        quantity: Number(quantityText),
+        unit,
         meal_type: mealType,
         protein_g: protein === "" ? null : Number(protein),
         carbs_g: carbs === "" ? null : Number(carbs),
@@ -384,7 +398,7 @@ export function EntryDialog({
                   },
                 }}
               />
-              <TimePicker
+              <MobileTimePicker
                 label="Time"
                 value={dayjs(`${date}T${time}`)}
                 onChange={(value: Dayjs | null) => value && setTime(value.format("HH:mm"))}
@@ -423,6 +437,8 @@ export function EntryDialog({
                             createFavorite.mutate({
                               food_name: foodName.trim(),
                               calories: Number(caloriesText) || 0,
+                              quantity: Number(quantityText) || 1,
+                              unit,
                               protein_g: protein === "" ? null : Number(protein),
                               carbs_g: carbs === "" ? null : Number(carbs),
                               fat_g: fat === "" ? null : Number(fat),
@@ -455,6 +471,30 @@ export function EntryDialog({
               fullWidth
               autoFocus={fromFdc}
             />
+
+            <Stack direction="row" gap={1.5}>
+              <TextField
+                label="Quantity"
+                value={quantityText}
+                onChange={(e) => setQuantityText(e.target.value.replace(/[^\d.]/g, ""))}
+                error={touched && Boolean(errors.quantity)}
+                helperText={touched && errors.quantity}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                select
+                label="Unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value as QuantityUnit)}
+                sx={{ flex: 1 }}
+              >
+                {QUANTITY_UNITS.map((u) => (
+                  <MenuItem key={u.value} value={u.value}>
+                    {u.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
 
             <Stack direction="row" gap={1.5}>
               <TextField

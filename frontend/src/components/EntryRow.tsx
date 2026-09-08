@@ -12,6 +12,7 @@ import LunchDiningIcon from "@mui/icons-material/LunchDining";
 import DinnerDiningIcon from "@mui/icons-material/DinnerDining";
 import CookieIcon from "@mui/icons-material/Cookie";
 import { MiniMacroBar } from "./MiniMacroBar";
+import { formatQuantity } from "../utils/quantityUnits";
 import { useFavoriteMutations, useFavorites } from "../hooks/useFavorites";
 import type { FoodEntry, MealType } from "../types";
 
@@ -75,7 +76,7 @@ export function EntryRow({ entry, onEdit, onDelete, rightExtra }: EntryRowProps)
         </Typography>
         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
           <Typography fontSize={12.5} fontWeight={500} color="text.secondary">
-            {time}
+            {time} · {formatQuantity(entry.quantity, entry.unit)}
           </Typography>
           <Chip
             size="small"

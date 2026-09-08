@@ -4,6 +4,7 @@ export const MAX_CALORIES = 5000;
 export interface EntryFormValues {
   foodName: string;
   caloriesText: string;
+  quantityText: string;
   date: string; // yyyy-mm-dd
   time: string; // HH:mm
 }
@@ -11,6 +12,7 @@ export interface EntryFormValues {
 export interface EntryFormErrors {
   foodName?: string;
   calories?: string;
+  quantity?: string;
   date?: string;
 }
 
@@ -41,6 +43,12 @@ export function validateEntryForm(values: EntryFormValues): EntryFormErrors {
     else if (cal > MAX_CALORIES) errors.calories = `Must be ${MAX_CALORIES} kcal or less.`;
   }
 
+  if (values.quantityText === "" || values.quantityText === undefined) {
+    errors.quantity = "Quantity is required.";
+  } else if (!/^\d*\.?\d+$/.test(values.quantityText) || Number(values.quantityText) <= 0) {
+    errors.quantity = "Enter a positive number.";
+  }
+
   if (!values.date) {
     errors.date = "Date is required.";
   } else {
@@ -56,7 +64,7 @@ export function validateEntryForm(values: EntryFormValues): EntryFormErrors {
 }
 
 export function hasErrors(errors: EntryFormErrors): boolean {
-  return Boolean(errors.foodName || errors.calories || errors.date);
+  return Boolean(errors.foodName || errors.calories || errors.quantity || errors.date);
 }
 
 export { todayIso };

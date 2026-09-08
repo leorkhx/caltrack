@@ -8,6 +8,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useFavoriteMutations, useFavorites } from "../../hooks/useFavorites";
 import { FavoriteDialog } from "./FavoriteDialog";
 import { FavoritesFilterNav, type FavoriteFilterOption, type FavoriteSortMode } from "./FavoritesFilterNav";
+import { formatQuantity } from "../../utils/quantityUnits";
 import type { FavoriteFood } from "../../types";
 
 export function FavoritesPage() {
@@ -152,6 +153,9 @@ export function FavoritesPage() {
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography fontSize={14.5} fontWeight={600} noWrap>
                   {f.food_name}
+                </Typography>
+                <Typography fontSize={11.5} color="text.secondary">
+                  {formatQuantity(f.quantity, f.unit)}
                 </Typography>
                 {(f.protein_g !== null || f.carbs_g !== null || f.fat_g !== null) && (
                   <Typography fontSize={11.5} color="text.secondary">

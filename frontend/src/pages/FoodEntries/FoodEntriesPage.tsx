@@ -10,8 +10,19 @@ import { EntryDialog } from "../../components/EntryDialog";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useMyEntries, useMyEntryMutations } from "../../hooks/useMyEntries";
-import type { FoodEntry, FoodEntryInput, User } from "../../types";
+import WbSunnyIcon from "@mui/icons-material/WbSunny";
+import LunchDiningIcon from "@mui/icons-material/LunchDining";
+import DinnerDiningIcon from "@mui/icons-material/DinnerDining";
+import CookieIcon from "@mui/icons-material/Cookie";
+import type { FoodEntry, FoodEntryInput, MealType, User } from "../../types";
 import { todayIso } from "../../utils/validation";
+
+const MEAL_SECTIONS: { type: MealType; label: string; icon: React.ReactElement }[] = [
+  { type: "breakfast", label: "Breakfast", icon: <WbSunnyIcon sx={{ fontSize: 14 }} /> },
+  { type: "lunch", label: "Lunch", icon: <LunchDiningIcon sx={{ fontSize: 14 }} /> },
+  { type: "snack", label: "Snack", icon: <CookieIcon sx={{ fontSize: 14 }} /> },
+  { type: "dinner", label: "Dinner", icon: <DinnerDiningIcon sx={{ fontSize: 14 }} /> },
+];
 
 function isoDaysAgo(days: number): string {
   const d = new Date();
@@ -320,18 +331,32 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
                 </Typography>
               </Stack>
             )}
-            <Stack sx={{ p: "14px" }}>
-              {group.list.map((entry) => (
-                <EntryRow
-                  key={entry.id}
-                  entry={entry}
-                  onEdit={() => {
-                    setEditing(entry);
-                    setDialogOpen(true);
-                  }}
-                  onDelete={() => handleDelete(entry.id)}
-                />
-              ))}
+            <Stack sx={{ p: "14px" }} gap={1}>
+              {MEAL_SECTIONS.map((section) => {
+                const items = group.list.filter((e) => e.meal_type === section.type);
+                if (items.length === 0) return null;
+                return (
+                  <Box key={section.type}>
+                    <Stack direction="row" alignItems="center" gap={0.75} sx={{ px: 1, pt: 1, pb: 0.5 }}>
+                      <Box sx={{ color: "text.secondary", display: "flex" }}>{section.icon}</Box>
+                      <Typography fontSize={11.5} fontWeight={700} letterSpacing={0.4} textTransform="uppercase" color="text.secondary">
+                        {section.label}
+                      </Typography>
+                    </Stack>
+                    {items.map((entry) => (
+                      <EntryRow
+                        key={entry.id}
+                        entry={entry}
+                        onEdit={() => {
+                          setEditing(entry);
+                          setDialogOpen(true);
+                        }}
+                        onDelete={() => handleDelete(entry.id)}
+                      />
+                    ))}
+                  </Box>
+                );
+              })}
             </Stack>
           </Card>
         ))

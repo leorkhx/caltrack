@@ -2,6 +2,7 @@ export type UserRole = "user" | "admin";
 export type BiologicalSex = "male" | "female";
 export type ActivityLevel = "sedentary" | "lightly_active" | "light" | "moderate" | "active" | "very_active";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type QuantityUnit = "g" | "kg" | "ml" | "l" | "oz" | "lb" | "cup" | "tbsp" | "tsp" | "piece" | "serving";
 
 export interface User {
   id: number;
@@ -38,6 +39,8 @@ export interface FoodEntry {
   user_id: number;
   food_name: string;
   calories: number;
+  quantity: number;
+  unit: QuantityUnit;
   meal_type: MealType;
   protein_g: number | null;
   carbs_g: number | null;
@@ -64,6 +67,8 @@ export interface PaginatedAdminFoodEntries {
 export interface FoodEntryInput {
   food_name: string;
   calories: number;
+  quantity: number;
+  unit: QuantityUnit;
   meal_type: MealType;
   protein_g?: number | null;
   carbs_g?: number | null;
@@ -86,6 +91,8 @@ export interface FavoriteFood {
   id: number;
   food_name: string;
   calories: number;
+  quantity: number;
+  unit: QuantityUnit;
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
@@ -96,6 +103,8 @@ export interface FavoriteFood {
 export interface FavoriteFoodInput {
   food_name: string;
   calories: number;
+  quantity?: number;
+  unit?: QuantityUnit;
   protein_g?: number | null;
   carbs_g?: number | null;
   fat_g?: number | null;

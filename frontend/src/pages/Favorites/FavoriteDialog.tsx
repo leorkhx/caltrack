@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -20,7 +21,8 @@ import AddIcon from "@mui/icons-material/Add";
 import { searchFoods } from "../../api/foods";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useFavoriteMutations } from "../../hooks/useFavorites";
-import type { FavoriteFood, FdcSearchResult } from "../../types";
+import { QUANTITY_UNITS } from "../../utils/quantityUnits";
+import type { FavoriteFood, FdcSearchResult, QuantityUnit } from "../../types";
 
 interface FavoriteDialogProps {
   open: boolean;
@@ -45,6 +47,8 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [calories, setCalories] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [unit, setUnit] = useState<QuantityUnit>("serving");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
@@ -61,6 +65,8 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
       setStep("details");
       setName(initialFavorite.food_name);
       setCalories(String(initialFavorite.calories));
+      setQuantity(String(initialFavorite.quantity));
+      setUnit(initialFavorite.unit);
       setProtein(toText(initialFavorite.protein_g));
       setCarbs(toText(initialFavorite.carbs_g));
       setFat(toText(initialFavorite.fat_g));
@@ -70,6 +76,8 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
       setQuery("");
       setName("");
       setCalories("");
+      setQuantity("1");
+      setUnit("serving");
       setProtein("");
       setCarbs("");
       setFat("");
@@ -103,6 +111,8 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
   const selectFdcResult = (result: FdcSearchResult) => {
     setName(result.name);
     setCalories(String(result.calories));
+    setQuantity("1");
+    setUnit("serving");
     setProtein(result.protein_g != null ? String(result.protein_g) : "");
     setCarbs(result.carbs_g != null ? String(result.carbs_g) : "");
     setFat(result.fat_g != null ? String(result.fat_g) : "");
@@ -113,6 +123,8 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
   const selectManualName = () => {
     setName(query.trim());
     setCalories("");
+    setQuantity("1");
+    setUnit("serving");
     setProtein("");
     setCarbs("");
     setFat("");
@@ -123,15 +135,26 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
   const nameError = touched && name.trim().length < 2 ? "Use at least 2 characters." : "";
   const caloriesError =
     touched && (!/^\d+$/.test(calories) || Number(calories) < 1) ? "Enter a positive whole number." : "";
-  const hasErrors = Boolean(nameError || caloriesError);
+  const quantityError =
+    touched && (!/^\d*\.?\d+$/.test(quantity) || Number(quantity) <= 0) ? "Enter a positive number." : "";
+  const hasErrors = Boolean(nameError || caloriesError || quantityError);
   const mutation = isEdit ? update : create;
 
   const handleSubmit = async () => {
     setTouched(true);
-    if (name.trim().length < 2 || !/^\d+$/.test(calories) || Number(calories) < 1) return;
+    if (
+      name.trim().length < 2 ||
+      !/^\d+$/.test(calories) ||
+      Number(calories) < 1 ||
+      !/^\d*\.?\d+$/.test(quantity) ||
+      Number(quantity) <= 0
+    )
+      return;
     const input = {
       food_name: name.trim(),
       calories: Number(calories),
+      quantity: Number(quantity),
+      unit,
       protein_g: protein === "" ? null : Number(protein),
       carbs_g: carbs === "" ? null : Number(carbs),
       fat_g: fat === "" ? null : Number(fat),
@@ -255,6 +278,29 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
               autoFocus={fromFdc}
               slotProps={{ input: { endAdornment: <Typography color="text.secondary" fontSize={13}>kcal</Typography> } }}
             />
+            <Stack direction="row" gap={1.5}>
+              <TextField
+                label="Quantity"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value.replace(/[^\d.]/g, ""))}
+                error={Boolean(quantityError)}
+                helperText={quantityError}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                select
+                label="Unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value as QuantityUnit)}
+                sx={{ flex: 1 }}
+              >
+                {QUANTITY_UNITS.map((u) => (
+                  <MenuItem key={u.value} value={u.value}>
+                    {u.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
             <Stack direction="row" gap={1.5}>
               <TextField
                 label="Protein"

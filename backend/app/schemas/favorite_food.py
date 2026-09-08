@@ -3,14 +3,19 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.models.food_entry import QuantityUnit
+
 MAX_CALORIES = 5000
 MIN_NAME_LEN = 2
 MAX_MACRO_GRAMS = 1000
+MAX_QUANTITY = 1000
 
 
 class FavoriteFoodCreate(BaseModel):
     food_name: str = Field(..., min_length=MIN_NAME_LEN, max_length=200)
     calories: int = Field(..., gt=0, le=MAX_CALORIES)
+    quantity: float = Field(1.0, gt=0, le=MAX_QUANTITY)
+    unit: QuantityUnit = QuantityUnit.serving
     protein_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     carbs_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     fat_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
@@ -28,6 +33,8 @@ class FavoriteFoodCreate(BaseModel):
 class FavoriteFoodUpdate(BaseModel):
     food_name: Optional[str] = Field(None, min_length=MIN_NAME_LEN, max_length=200)
     calories: Optional[int] = Field(None, gt=0, le=MAX_CALORIES)
+    quantity: Optional[float] = Field(None, gt=0, le=MAX_QUANTITY)
+    unit: Optional[QuantityUnit] = None
     protein_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     carbs_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
     fat_g: Optional[int] = Field(None, ge=0, le=MAX_MACRO_GRAMS)
@@ -50,6 +57,8 @@ class FavoriteFoodOut(BaseModel):
     id: int
     food_name: str
     calories: int
+    quantity: float
+    unit: QuantityUnit
     protein_g: Optional[int] = None
     carbs_g: Optional[int] = None
     fat_g: Optional[int] = None

@@ -26,6 +26,8 @@ def _to_admin_out(entry: FoodEntry, day_total: int) -> AdminFoodEntryOut:
         user_id=entry.user_id,
         food_name=entry.food_name,
         calories=entry.calories,
+        quantity=entry.quantity,
+        unit=entry.unit,
         meal_type=entry.meal_type,
         protein_g=entry.protein_g,
         carbs_g=entry.carbs_g,
