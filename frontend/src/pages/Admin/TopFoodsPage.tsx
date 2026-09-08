@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Card, Chip, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, Chip, CircularProgress, IconButton, MenuItem, Select, Stack, Typography, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import ShieldIcon from "@mui/icons-material/Shield";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -23,6 +24,8 @@ const RANGE_OPTIONS: { key: RangeKey; label: string; params: TopFoodsParams }[] 
 ];
 
 export function TopFoodsPage() {
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down("md"));
   const [rangeKey, setRangeKey] = useState<RangeKey>("all");
   const [page, setPage] = useState(1);
   const rangeConfig = RANGE_OPTIONS.find((r) => r.key === rangeKey)!;
@@ -54,25 +57,40 @@ export function TopFoodsPage() {
             Which foods your users log most often, across all regular users
           </Typography>
         </Box>
-        <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ ml: "auto", p: 0.5, bgcolor: "#e7e9f0", borderRadius: "15px" }}>
-          {RANGE_OPTIONS.map((r) => (
-            <Button
-              key={r.key}
-              size="small"
-              onClick={() => setRangeKey(r.key)}
-              sx={{
-                borderRadius: "11px",
-                px: 1.75,
-                minWidth: 0,
-                color: rangeKey === r.key ? "#fff" : "text.secondary",
-                bgcolor: rangeKey === r.key ? "primary.main" : "transparent",
-                "&:hover": { bgcolor: rangeKey === r.key ? "primary.dark" : "rgba(23,26,40,0.06)" },
-              }}
-            >
-              {r.label}
-            </Button>
-          ))}
-        </Stack>
+        {isSmall ? (
+          <Select
+            size="small"
+            value={rangeKey}
+            onChange={(e) => setRangeKey(e.target.value as RangeKey)}
+            sx={{ ml: "auto", minWidth: 140 }}
+          >
+            {RANGE_OPTIONS.map((r) => (
+              <MenuItem key={r.key} value={r.key}>
+                {r.label}
+              </MenuItem>
+            ))}
+          </Select>
+        ) : (
+          <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ ml: "auto", p: 0.5, bgcolor: "#e7e9f0", borderRadius: "15px" }}>
+            {RANGE_OPTIONS.map((r) => (
+              <Button
+                key={r.key}
+                size="small"
+                onClick={() => setRangeKey(r.key)}
+                sx={{
+                  borderRadius: "11px",
+                  px: 1.75,
+                  minWidth: 0,
+                  color: rangeKey === r.key ? "#fff" : "text.secondary",
+                  bgcolor: rangeKey === r.key ? "primary.main" : "transparent",
+                  "&:hover": { bgcolor: rangeKey === r.key ? "primary.dark" : "rgba(23,26,40,0.06)" },
+                }}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </Stack>
+        )}
       </Stack>
 
       {loading && !data ? (
@@ -90,52 +108,79 @@ export function TopFoodsPage() {
           <Stack gap={1}>
             {items.map((item, i) => {
               const rank = (page - 1) * PAGE_SIZE + i + 1;
-              return (
-                <Stack
-                  key={item.food_name}
-                  direction="row"
-                  alignItems="center"
-                  gap={1.75}
-                  sx={{ p: 1.5, borderRadius: "18px", bgcolor: "#f8f9fc", border: "1px solid rgba(23,26,40,0.04)" }}
+              const rankBadge = (
+                <Box
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    flex: "none",
+                    borderRadius: "12px",
+                    bgcolor: rank <= 3 ? AV[i % AV.length] : "rgba(23,26,40,0.06)",
+                    color: rank <= 3 ? "#fff" : "text.secondary",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 13,
+                    fontWeight: 800,
+                  }}
                 >
+                  {rank}
+                </Box>
+              );
+              const progressBar = (
+                <Box sx={{ flex: 1, height: 10, borderRadius: "6px", bgcolor: "#e7e9f0", overflow: "hidden" }}>
                   <Box
                     sx={{
-                      width: 34,
-                      height: 34,
-                      flex: "none",
-                      borderRadius: "12px",
-                      bgcolor: rank <= 3 ? AV[i % AV.length] : "rgba(23,26,40,0.06)",
-                      color: rank <= 3 ? "#fff" : "text.secondary",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 13,
-                      fontWeight: 800,
+                      height: 10,
+                      borderRadius: "6px",
+                      width: `${Math.round((item.entries_count / maxCount) * 100)}%`,
+                      background: `linear-gradient(90deg, rgba(91,91,214,0.65) 0%, ${AV[i % AV.length]} 100%)`,
                     }}
-                  >
-                    {rank}
-                  </Box>
-                  <Box sx={{ width: 220, minWidth: 0 }}>
-                    <Typography fontSize={14} fontWeight={600} noWrap>
+                  />
+                </Box>
+              );
+              const entriesLabel = `${item.entries_count} ${item.entries_count === 1 ? "entry" : "entries"}`;
+
+              return (
+                <Box
+                  key={item.food_name}
+                  sx={{ p: 1.5, borderRadius: "18px", bgcolor: "#f8f9fc", border: "1px solid rgba(23,26,40,0.04)" }}
+                >
+                  {/* Mobile: entries count on top, full food name below, bar underneath */}
+                  <Stack gap={1} sx={{ display: { xs: "flex", sm: "none" } }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5}>
+                      <Stack direction="row" alignItems="center" gap={1.25} sx={{ minWidth: 0 }}>
+                        {rankBadge}
+                        <Typography fontFamily="Roboto Mono, monospace" fontSize={13} fontWeight={600} color="text.secondary">
+                          {entriesLabel}
+                        </Typography>
+                      </Stack>
+                      <Typography fontSize={11.5} color="text.secondary" sx={{ flex: "none" }}>
+                        {item.average_calories} kcal avg
+                      </Typography>
+                    </Stack>
+                    <Typography fontSize={14} fontWeight={600} sx={{ wordBreak: "break-word" }}>
                       {item.food_name}
                     </Typography>
-                    <Typography fontSize={11.5} color="text.secondary" sx={{ mt: 0.25 }}>
-                      {item.average_calories} kcal avg
+                    {progressBar}
+                  </Stack>
+
+                  {/* Desktop: single row */}
+                  <Stack direction="row" alignItems="center" gap={1.75} sx={{ display: { xs: "none", sm: "flex" } }}>
+                    {rankBadge}
+                    <Box sx={{ width: 220, minWidth: 0 }}>
+                      <Typography fontSize={14} fontWeight={600} noWrap>
+                        {item.food_name}
+                      </Typography>
+                      <Typography fontSize={11.5} color="text.secondary" sx={{ mt: 0.25 }}>
+                        {item.average_calories} kcal avg
+                      </Typography>
+                    </Box>
+                    {progressBar}
+                    <Typography fontFamily="Roboto Mono, monospace" fontSize={14.5} sx={{ width: 130, textAlign: "right" }}>
+                      {entriesLabel}
                     </Typography>
-                  </Box>
-                  <Box sx={{ flex: 1, height: 10, borderRadius: "6px", bgcolor: "#e7e9f0", overflow: "hidden" }}>
-                    <Box
-                      sx={{
-                        height: 10,
-                        borderRadius: "6px",
-                        width: `${Math.round((item.entries_count / maxCount) * 100)}%`,
-                        background: `linear-gradient(90deg, rgba(91,91,214,0.65) 0%, ${AV[i % AV.length]} 100%)`,
-                      }}
-                    />
-                  </Box>
-                  <Typography fontFamily="Roboto Mono, monospace" fontSize={14.5} sx={{ width: 130, textAlign: "right" }}>
-                    {item.entries_count} {item.entries_count === 1 ? "entry" : "entries"}
-                  </Typography>
-                </Stack>
+                  </Stack>
+                </Box>
               );
             })}
           </Stack>

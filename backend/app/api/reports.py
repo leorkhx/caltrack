@@ -17,10 +17,11 @@ router = APIRouter(prefix="/api/admin", tags=["reports"])
 def get_reports(
     days: Optional[int] = Query(7, ge=1, le=3650),
     all_time: bool = Query(False, alias="all"),
+    user_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    return build_reports(db, days=None if all_time else days)
+    return build_reports(db, days=None if all_time else days, user_id=user_id)
 
 
 @router.get("/foods/top", response_model=TopFoodsOut)

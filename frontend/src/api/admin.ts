@@ -35,6 +35,7 @@ export async function deleteEntryAsAdmin(id: number): Promise<void> {
 export interface ReportsParams {
   days?: number;
   all?: boolean;
+  user_id?: number;
 }
 
 export async function fetchReports(params: ReportsParams = {}): Promise<ReportsData> {

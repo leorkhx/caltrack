@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Box, Card, Chip, CircularProgress, MenuItem, Select, Stack, Tab, Tabs, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ShieldPersonIcon from "@mui/icons-material/Shield";
+import PersonIcon from "@mui/icons-material/Person";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import PercentIcon from "@mui/icons-material/Percent";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
@@ -9,6 +10,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { useReports } from "../../hooks/useReports";
+import { useAdminUsers } from "../../hooks/useAdminEntries";
 import type { ReportsParams } from "../../api/admin";
 
 type RangeKey = "7d" | "14d" | "30d" | "6m" | "1y" | "2y" | "3y" | "5y" | "all";
@@ -29,8 +31,11 @@ export function ReportsPage() {
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("md"));
   const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const rangeConfig = RANGE_OPTIONS.find((r) => r.key === rangeKey)!;
-  const { data, isLoading: loading } = useReports(rangeConfig.params);
+  const { data: users = [] } = useAdminUsers();
+  const loggableUsers = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
+  const { data, isLoading: loading } = useReports({ ...rangeConfig.params, user_id: selectedUserId ?? undefined });
 
   if (loading && !data) {
     return (
@@ -46,6 +51,8 @@ export function ReportsPage() {
   const deltaPct = period.previous_count ? Math.round((delta / period.previous_count) * 100) : 0;
   const maxPeriod = Math.max(period.current_count, period.previous_count, 1);
   const periodLabel = rangeConfig.key === "all" ? "all time" : `last ${data.period_days} days`;
+  const selectedUserName = selectedUserId ? loggableUsers.find((u) => u.id === selectedUserId)?.name : null;
+  const scopeLabel = selectedUserName ? `for ${selectedUserName}` : "across all users";
 
   return (
     <Box>
@@ -61,6 +68,20 @@ export function ReportsPage() {
             Reports
           </Typography>
         </Box>
+        <Select
+          size="small"
+          value={selectedUserId ?? "all"}
+          onChange={(e) => setSelectedUserId(e.target.value === "all" ? null : Number(e.target.value))}
+          startAdornment={<PersonIcon sx={{ fontSize: 18, color: "text.secondary", mr: 0.75 }} />}
+          sx={{ ml: isSmall ? 0 : "auto", minWidth: 170 }}
+        >
+          <MenuItem value="all">All users</MenuItem>
+          {loggableUsers.map((u) => (
+            <MenuItem key={u.id} value={u.id}>
+              {u.name}
+            </MenuItem>
+          ))}
+        </Select>
         {isSmall && (
           <Select
             size="small"
@@ -165,14 +186,14 @@ export function ReportsPage() {
               <RestaurantIcon fontSize="small" />
             </Box>
             <Typography fontSize={12.5} fontWeight={700} color="text.secondary">
-              Avg kcal / user / day
+              {selectedUserName ? "Avg kcal / day" : "Avg kcal / user / day"}
             </Typography>
           </Stack>
           <Typography fontFamily="Roboto Mono, monospace" fontSize={44} fontWeight={500} letterSpacing={-2} sx={{ my: 2.5 }}>
             {allAvg}
           </Typography>
           <Typography fontSize={13} fontWeight={600} color="text.secondary">
-            Across {avgRows.length} users
+            {selectedUserName ? `For ${selectedUserName}` : `Across ${avgRows.length} users`}
           </Typography>
         </Card>
       </Box>
@@ -228,7 +249,7 @@ export function ReportsPage() {
           Calories logged over time
         </Typography>
         <Typography fontSize={13} color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
-          Combined total across all users · {periodLabel}
+          Combined total {scopeLabel} · {periodLabel}
         </Typography>
         <LineChart
           height={280}

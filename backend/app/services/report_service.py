@@ -37,7 +37,9 @@ def _earliest_entry_date(db: Session) -> date:
     return earliest.date() if earliest else date.today()
 
 
-def build_reports(db: Session, today: date | None = None, days: Optional[int] = 7) -> ReportsOut:
+def build_reports(
+    db: Session, today: date | None = None, days: Optional[int] = 7, user_id: Optional[int] = None
+) -> ReportsOut:
     today = today or date.today()
 
     if days is None:
@@ -51,8 +53,8 @@ def build_reports(db: Session, today: date | None = None, days: Optional[int] = 
     prev_end = start - timedelta(days=1)
     prev_start = prev_end - timedelta(days=span - 1)
 
-    current_count = _count_in_window(db, start, end)
-    previous_count = _count_in_window(db, prev_start, prev_end)
+    current_count = _count_in_window(db, start, end, user_id=user_id)
+    previous_count = _count_in_window(db, prev_start, prev_end, user_id=user_id)
 
     period_comparison = PeriodComparison(
         current_count=current_count,
@@ -64,7 +66,11 @@ def build_reports(db: Session, today: date | None = None, days: Optional[int] = 
     )
 
     # Only regular users show up in per-user stats — the admin account doesn't log food.
-    users = db.query(User).filter(User.role == UserRole.user).order_by(User.name).all()
+    users_query = db.query(User).filter(User.role == UserRole.user)
+    if user_id is not None:
+        users_query = users_query.filter(User.id == user_id)
+    users = users_query.order_by(User.name).all()
+
     per_user_averages: list[UserAverage] = []
     total_calories = 0
     total_days_with_data = 0
@@ -81,7 +87,7 @@ def build_reports(db: Session, today: date | None = None, days: Optional[int] = 
 
     overall_avg = round(total_calories / total_days_with_data, 1) if total_days_with_data else 0.0
 
-    daily_rows = (
+    daily_query = (
         db.query(
             func.date(FoodEntry.consumed_at).label("day"),
             func.coalesce(func.sum(FoodEntry.calories), 0).label("total_calories"),
@@ -93,9 +99,10 @@ def build_reports(db: Session, today: date | None = None, days: Optional[int] = 
             FoodEntry.consumed_at >= datetime.combine(start, time.min),
             FoodEntry.consumed_at <= datetime.combine(end, time.max),
         )
-        .group_by(func.date(FoodEntry.consumed_at))
-        .all()
     )
+    if user_id is not None:
+        daily_query = daily_query.filter(FoodEntry.user_id == user_id)
+    daily_rows = daily_query.group_by(func.date(FoodEntry.consumed_at)).all()
     totals_by_day = {row.day: (row.total_calories, row.entries_count) for row in daily_rows}
     daily_totals: list[DailyTotal] = []
     cursor = start

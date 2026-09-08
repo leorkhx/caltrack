@@ -27,7 +27,7 @@ export const queryKeys = {
     page?: number;
     page_size?: number;
   }) => ["admin-entries", params] as const,
-  reports: (params: { days?: number; all?: boolean }) => ["reports", params] as const,
+  reports: (params: { days?: number; all?: boolean; user_id?: number }) => ["reports", params] as const,
   topFoods: (params: { days?: number; all?: boolean; page?: number; page_size?: number }) => ["top-foods", params] as const,
   favorites: ["favorites"] as const,
 };
