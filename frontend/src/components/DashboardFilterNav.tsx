@@ -116,6 +116,7 @@ export function DashboardFilterNav({
           value={dateFrom ? dayjs(dateFrom) : null}
           onChange={(value: Dayjs | null) => onDateFromChange(value ? value.format("YYYY-MM-DD") : "")}
           maxDate={dayjs()}
+          disabled={activeRangeDays !== null}
           slotProps={{ textField: { variant: "standard", sx: DATE_FIELD_SX } }}
         />
         <span style={{ color: "#c3c7d4", fontWeight: 700 }}>-</span>
@@ -123,6 +124,7 @@ export function DashboardFilterNav({
           value={dateTo ? dayjs(dateTo) : null}
           onChange={(value: Dayjs | null) => onDateToChange(value ? value.format("YYYY-MM-DD") : "")}
           maxDate={dayjs()}
+          disabled={activeRangeDays !== null}
           slotProps={{ textField: { variant: "standard", sx: DATE_FIELD_SX } }}
         />
       </Stack>

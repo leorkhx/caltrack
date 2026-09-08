@@ -82,17 +82,46 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
 
   const today = todayIso();
   const todayTotal = totalsByDay[today] || 0;
+  const todayMacros = useMemo(() => {
+    return entries
+      .filter((e) => dateKey(e.consumed_at) === today)
+      .reduce(
+        (acc, e) => ({
+          protein: acc.protein + (e.protein_g ?? 0),
+          carbs: acc.carbs + (e.carbs_g ?? 0),
+          fat: acc.fat + (e.fat_g ?? 0),
+        }),
+        { protein: 0, carbs: 0, fat: 0 }
+      );
+  }, [entries, today]);
 
-  const week = useMemo(() => {
+  const rangeSpan = useMemo(() => {
+    const from = dateFrom || today;
+    const to = dateTo || today;
     const arr: { date: string; total: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = isoDaysAgo(i);
-      arr.push({ date: d, total: totalsByDay[d] || 0 });
+    for (let d = new Date(`${from}T00:00:00`); d <= new Date(`${to}T00:00:00`); d.setDate(d.getDate() + 1)) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      arr.push({ date: key, total: totalsByDay[key] || 0 });
     }
     return arr;
-  }, [totalsByDay]);
-  const weekAvg = Math.round(week.reduce((a, w) => a + w.total, 0) / 7);
-  const overCount = week.filter((w) => w.total > limit).length;
+  }, [totalsByDay, dateFrom, dateTo, today]);
+  const rangeDayCount = rangeSpan.length;
+  const rangeAvg = rangeDayCount ? Math.round(rangeSpan.reduce((a, w) => a + w.total, 0) / rangeDayCount) : 0;
+
+  const overStats = useMemo(() => {
+    if (rangeDays !== null) {
+      // 7d/14d: same bounded range as the average card, shown as "X/N".
+      const count = rangeSpan.filter((w) => w.total > limit).length;
+      return { bounded: true as const, count, total: rangeDayCount };
+    }
+    // Custom: unbounded by default (all entries), or the chosen custom dates once set.
+    let earliest: string | null = null;
+    Object.keys(totalsByDay).forEach((key) => {
+      if (earliest === null || key < earliest) earliest = key;
+    });
+    const count = Object.values(totalsByDay).filter((t) => t > limit).length;
+    return { bounded: false as const, count, since: dateFrom || earliest || today };
+  }, [rangeDays, rangeSpan, rangeDayCount, totalsByDay, dateFrom, today, limit]);
 
   const dayGroups = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -213,20 +242,34 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
           total={todayTotal}
           limit={limit}
           headline={todayTotal > limit ? "You're over today's limit" : `${limit - todayTotal} kcal still available`}
+          macros={{
+            protein: todayMacros.protein,
+            carbs: todayMacros.carbs,
+            fat: todayMacros.fat,
+            proteinTarget: currentUser.protein_target_g,
+            carbsTarget: currentUser.carbs_target_g,
+            fatTarget: currentUser.fat_target_g,
+          }}
         />
         <StatCard
           icon={<MonitorHeartIcon fontSize="small" />}
-          label="7-day average"
-          value={weekAvg}
-          note={weekAvg > limit ? "Above your daily limit on average" : `${limit - weekAvg} kcal below your limit on average`}
+          label={`${rangeDayCount}-day average`}
+          value={rangeAvg}
+          note={rangeAvg > limit ? "Above your daily limit on average" : `${limit - rangeAvg} kcal below your limit on average`}
         />
         <StatCard
           icon={<WarningAmberIcon fontSize="small" />}
           label="Days over limit"
-          value={`${overCount}/7`}
+          value={overStats.bounded ? `${overStats.count}/${overStats.total}` : overStats.count}
           tint="rgba(229,72,77,0.12)"
           iconColor="#c93a3f"
-          note={overCount === 0 ? "Clean week so far — keep it up" : "Highlighted in red below"}
+          note={
+            overStats.count === 0
+              ? "Clean streak so far — keep it up"
+              : overStats.bounded
+                ? "Highlighted in red below"
+                : `Since ${new Date(`${overStats.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+          }
         />
       </Box>
 
@@ -316,19 +359,36 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
               />
             </Box>
             {group.macroTotals && (
-              <Stack direction="row" gap={2} sx={{ px: 3, pt: 1.5 }}>
-                <Typography fontSize={12} fontWeight={600} color="text.secondary">
-                  Protein {group.macroTotals.protein}g
-                  {currentUser.protein_target_g ? ` / ${currentUser.protein_target_g}g` : ""}
-                </Typography>
-                <Typography fontSize={12} fontWeight={600} color="text.secondary">
-                  Carbs {group.macroTotals.carbs}g
-                  {currentUser.carbs_target_g ? ` / ${currentUser.carbs_target_g}g` : ""}
-                </Typography>
-                <Typography fontSize={12} fontWeight={600} color="text.secondary">
-                  Fat {group.macroTotals.fat}g
-                  {currentUser.fat_target_g ? ` / ${currentUser.fat_target_g}g` : ""}
-                </Typography>
+              <Stack direction="row" gap={2.5} sx={{ px: 3, pt: 1.5 }} flexWrap="wrap">
+                {[
+                  { label: "Protein", grams: group.macroTotals.protein, target: currentUser.protein_target_g, color: "#4f4fd0" },
+                  { label: "Carbs", grams: group.macroTotals.carbs, target: currentUser.carbs_target_g, color: "#c8790a" },
+                  { label: "Fat", grams: group.macroTotals.fat, target: currentUser.fat_target_g, color: "#c93a3f" },
+                ].map((m) => {
+                  const pct = m.target ? Math.min(m.grams / m.target, 1) * 100 : 100;
+                  return (
+                    <Stack key={m.label} sx={{ flex: "1 1 140px", minWidth: 120 }} gap={0.5}>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography fontSize={11.5} fontWeight={700} sx={{ color: m.color }}>
+                          {m.label}
+                        </Typography>
+                        <Typography fontSize={11.5} fontWeight={600} color="text.secondary">
+                          {m.grams}g{m.target ? ` / ${m.target}g` : ""}
+                        </Typography>
+                      </Stack>
+                      <Box sx={{ height: 6, borderRadius: "4px", bgcolor: "#eceef4", overflow: "hidden" }}>
+                        <Box
+                          sx={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            borderRadius: "4px",
+                            bgcolor: m.target ? m.color : "#c3c7d4",
+                          }}
+                        />
+                      </Box>
+                    </Stack>
+                  );
+                })}
               </Stack>
             )}
             <Stack sx={{ p: "14px" }} gap={1}>

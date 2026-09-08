@@ -2,20 +2,44 @@ import { Box, Card, Chip, Stack, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
+interface MacroProgress {
+  label: string;
+  grams: number;
+  targetGrams: number | null;
+  color: string;
+}
+
 interface CalorieRingProps {
   total: number;
   limit: number;
   headline: string;
+  macros?: {
+    protein: number;
+    carbs: number;
+    fat: number;
+    proteinTarget: number | null;
+    carbsTarget: number | null;
+    fatTarget: number | null;
+  };
 }
 
 const RADIUS = 56;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function CalorieRing({ total, limit, headline }: CalorieRingProps) {
+export function CalorieRing({ total, limit, headline, macros }: CalorieRingProps) {
   const pct = limit > 0 ? Math.min(total / limit, 1) : 0;
   const overLimit = total > limit;
   const offset = CIRCUMFERENCE * (1 - pct);
   const ringColor = overLimit ? "#e5484d" : "#7c7cf5";
+
+  const macroRows: MacroProgress[] | null = macros
+    ? [
+        { label: "Protein", grams: macros.protein, targetGrams: macros.proteinTarget, color: "#9d9dfa" },
+        { label: "Carbs", grams: macros.carbs, targetGrams: macros.carbsTarget, color: "#ffb35c" },
+        { label: "Fat", grams: macros.fat, targetGrams: macros.fatTarget, color: "#ff9a9d" },
+      ]
+    : null;
+  const hasAnyMacroData = macroRows?.some((m) => m.grams > 0 || m.targetGrams !== null) ?? false;
 
   return (
     <Card
@@ -82,6 +106,26 @@ export function CalorieRing({ total, limit, headline }: CalorieRingProps) {
             }}
           />
         </Stack>
+        {hasAnyMacroData && macroRows && (
+          <Stack gap={0.9} sx={{ mt: 1.75 }}>
+            {macroRows.map((m) => {
+              const macroPct = m.targetGrams ? Math.min(m.grams / m.targetGrams, 1) : 0;
+              return (
+                <Stack key={m.label} direction="row" alignItems="center" gap={1}>
+                  <Typography fontSize={11.5} fontWeight={600} sx={{ width: 52, color: "rgba(255,255,255,0.7)" }}>
+                    {m.label}
+                  </Typography>
+                  <Box sx={{ flex: 1, height: 6, borderRadius: "4px", bgcolor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+                    <Box sx={{ height: "100%", width: `${m.targetGrams ? macroPct * 100 : 0}%`, bgcolor: m.color, borderRadius: "4px" }} />
+                  </Box>
+                  <Typography fontFamily="Roboto Mono, monospace" fontSize={11.5} fontWeight={500} sx={{ color: "rgba(255,255,255,0.85)", minWidth: 62, textAlign: "right" }}>
+                    {m.grams}g{m.targetGrams ? ` / ${m.targetGrams}g` : ""}
+                  </Typography>
+                </Stack>
+              );
+            })}
+          </Stack>
+        )}
       </Box>
     </Card>
   );

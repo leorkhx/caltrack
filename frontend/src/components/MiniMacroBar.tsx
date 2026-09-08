@@ -19,9 +19,9 @@ export function MiniMacroBar({ proteinG, carbsG, fatG }: MiniMacroBarProps) {
   const total = proteinKcal + carbsKcal + fatKcal;
 
   const segments = [
-    { key: "protein", kcal: proteinKcal, color: COLORS.protein, grams: proteinG, label: "Protein" },
-    { key: "carbs", kcal: carbsKcal, color: COLORS.carbs, grams: carbsG, label: "Carbs" },
-    { key: "fat", kcal: fatKcal, color: COLORS.fat, grams: fatG, label: "Fat" },
+    { key: "protein", kcal: proteinKcal, color: COLORS.protein, grams: proteinG, label: "Protein", short: "P" },
+    { key: "carbs", kcal: carbsKcal, color: COLORS.carbs, grams: carbsG, label: "Carbs", short: "C" },
+    { key: "fat", kcal: fatKcal, color: COLORS.fat, grams: fatG, label: "Fat", short: "F" },
   ];
 
   return (
@@ -36,15 +36,24 @@ export function MiniMacroBar({ proteinG, carbsG, fatG }: MiniMacroBarProps) {
         </Stack>
       }
     >
-      <Stack direction="row" alignItems="center" gap={0.75} sx={{ minWidth: 110 }}>
-        <Stack direction="row" sx={{ width: 56, height: 8, borderRadius: "5px", overflow: "hidden", flex: "none" }}>
+      <Stack direction="row" alignItems="center" gap={1} sx={{ minWidth: 110, width: "100%" }}>
+        <Stack
+          direction="row"
+          sx={{
+            width: { xs: 56, sm: 140, md: 200 },
+            height: 8,
+            borderRadius: "5px",
+            overflow: "hidden",
+            flex: "none",
+          }}
+        >
           {segments.map((s) => (s.kcal > 0 ? <Box key={s.key} sx={{ flex: s.kcal, bgcolor: s.color }} /> : null))}
           {total === 0 && <Box sx={{ flex: 1, bgcolor: "#eceef4" }} />}
         </Stack>
-        <Stack direction="row" gap={0.6}>
+        <Stack direction="row" gap={0.9}>
           {segments.map((s) => (
             <Typography key={s.key} fontSize={11} fontWeight={600} sx={{ color: s.color }}>
-              {s.grams}g
+              {s.short} {s.grams}g
             </Typography>
           ))}
         </Stack>
