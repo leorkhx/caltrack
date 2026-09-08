@@ -19,6 +19,7 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   me: ["me"] as const,
   myEntries: (params: { date_from?: string; date_to?: string }) => ["food-entries", params] as const,
+  myEntriesCount: (params: { date_from?: string; date_to?: string }) => ["food-entries", "count", params] as const,
   adminUsers: ["admin-users"] as const,
   adminEntries: (params: {
     user_id?: number;

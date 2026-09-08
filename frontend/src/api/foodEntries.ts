@@ -11,6 +11,11 @@ export async function fetchMyEntries(params: DateRangeParams = {}): Promise<Food
   return data;
 }
 
+export async function fetchMyEntriesCount(params: DateRangeParams = {}): Promise<number> {
+  const { data } = await apiClient.get<{ total: number }>("/api/food-entries/count", { params });
+  return data.total;
+}
+
 export async function createMyEntry(input: FoodEntryInput): Promise<FoodEntry> {
   const { data } = await apiClient.post<FoodEntry>("/api/food-entries", input);
   return data;

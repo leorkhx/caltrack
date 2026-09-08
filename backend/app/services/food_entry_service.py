@@ -3,11 +3,14 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.food_entry import FoodEntry
 from app.models.user import User
 from app.schemas.food_entry import AdminFoodEntryCreate, FoodEntryCreate, FoodEntryUpdate
+
+
+MAX_ENTRIES_PER_REQUEST = 2000
 
 
 def _date_bounds(date_from: Optional[date], date_to: Optional[date]):
@@ -25,7 +28,21 @@ def list_entries_for_user(
         query = query.filter(FoodEntry.consumed_at >= start)
     if end:
         query = query.filter(FoodEntry.consumed_at <= end)
-    return query.order_by(FoodEntry.consumed_at.desc()).all()
+    # Hard cap so a long-lived account with no date filter can't pull its
+    # entire history into memory in one request.
+    return query.order_by(FoodEntry.consumed_at.desc()).limit(MAX_ENTRIES_PER_REQUEST).all()
+
+
+def count_entries_for_user(
+    db: Session, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None
+) -> int:
+    query = db.query(func.count(FoodEntry.id)).filter(FoodEntry.user_id == user_id)
+    start, end = _date_bounds(date_from, date_to)
+    if start:
+        query = query.filter(FoodEntry.consumed_at >= start)
+    if end:
+        query = query.filter(FoodEntry.consumed_at <= end)
+    return query.scalar() or 0
 
 
 def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date], int]:
@@ -60,7 +77,7 @@ def list_entries_admin(
     page: int = 1,
     page_size: int = 20,
 ):
-    query = db.query(FoodEntry)
+    query = db.query(FoodEntry).options(joinedload(FoodEntry.user))
     if user_id is not None:
         query = query.filter(FoodEntry.user_id == user_id)
     start, end = _date_bounds(date_from, date_to)

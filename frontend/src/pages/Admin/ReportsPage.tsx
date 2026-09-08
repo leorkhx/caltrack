@@ -68,30 +68,47 @@ export function ReportsPage() {
             Reports
           </Typography>
         </Box>
-        <Select
-          size="small"
-          value={selectedUserId ?? "all"}
-          onChange={(e) => setSelectedUserId(e.target.value === "all" ? null : Number(e.target.value))}
-          startAdornment={<PersonIcon sx={{ fontSize: 18, color: "text.secondary", mr: 0.75 }} />}
-          sx={{ ml: isSmall ? 0 : "auto", minWidth: 170 }}
-        >
-          <MenuItem value="all">All users</MenuItem>
-          {loggableUsers.map((u) => (
-            <MenuItem key={u.id} value={u.id}>
-              {u.name}
-            </MenuItem>
-          ))}
-        </Select>
-        {isSmall && (
+        {isSmall ? (
+          <Stack direction="row" justifyContent="space-between" gap={1.25} sx={{ width: "100%" }}>
+            <Select
+              size="small"
+              value={selectedUserId ?? "all"}
+              onChange={(e) => setSelectedUserId(e.target.value === "all" ? null : Number(e.target.value))}
+              startAdornment={<PersonIcon sx={{ fontSize: 18, color: "text.secondary", mr: 0.75 }} />}
+              sx={{ flex: 1, minWidth: 0 }}
+            >
+              <MenuItem value="all">All users</MenuItem>
+              {loggableUsers.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={rangeKey}
+              onChange={(e) => setRangeKey(e.target.value as RangeKey)}
+              sx={{ flex: 1, minWidth: 0 }}
+            >
+              {RANGE_OPTIONS.map((r) => (
+                <MenuItem key={r.key} value={r.key}>
+                  {r.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
+        ) : (
           <Select
             size="small"
-            value={rangeKey}
-            onChange={(e) => setRangeKey(e.target.value as RangeKey)}
-            sx={{ ml: "auto", minWidth: 140 }}
+            value={selectedUserId ?? "all"}
+            onChange={(e) => setSelectedUserId(e.target.value === "all" ? null : Number(e.target.value))}
+            startAdornment={<PersonIcon sx={{ fontSize: 18, color: "text.secondary", mr: 0.75 }} />}
+            sx={{ ml: "auto", minWidth: 170 }}
           >
-            {RANGE_OPTIONS.map((r) => (
-              <MenuItem key={r.key} value={r.key}>
-                {r.label}
+            <MenuItem value="all">All users</MenuItem>
+            {loggableUsers.map((u) => (
+              <MenuItem key={u.id} value={u.id}>
+                {u.name}
               </MenuItem>
             ))}
           </Select>

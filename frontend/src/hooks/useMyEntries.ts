@@ -3,6 +3,7 @@ import {
   createMyEntry,
   deleteMyEntry,
   fetchMyEntries,
+  fetchMyEntriesCount,
   updateMyEntry,
   type DateRangeParams,
 } from "../api/foodEntries";
@@ -13,6 +14,14 @@ export function useMyEntries(params: DateRangeParams) {
   return useQuery({
     queryKey: queryKeys.myEntries(params),
     queryFn: () => fetchMyEntries(params),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useMyEntriesCount(params: DateRangeParams) {
+  return useQuery({
+    queryKey: queryKeys.myEntriesCount(params),
+    queryFn: () => fetchMyEntriesCount(params),
     placeholderData: (previous) => previous,
   });
 }

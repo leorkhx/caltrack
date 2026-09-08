@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.auth import get_current_user
 from app.database import get_db
 from app.models.user import User, UserRole
-from app.schemas.food_entry import FoodEntryCreate, FoodEntryOut, FoodEntryUpdate
+from app.schemas.food_entry import FoodEntryCount, FoodEntryCreate, FoodEntryOut, FoodEntryUpdate
 from app.services import food_entry_service
 
 router = APIRouter(prefix="/api/food-entries", tags=["food-entries"])
@@ -21,6 +21,17 @@ def list_my_entries(
     db: Session = Depends(get_db),
 ):
     return food_entry_service.list_entries_for_user(db, current_user.id, date_from, date_to)
+
+
+@router.get("/count", response_model=FoodEntryCount)
+def count_my_entries(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    total = food_entry_service.count_entries_for_user(db, current_user.id, date_from, date_to)
+    return FoodEntryCount(total=total)
 
 
 @router.post("", response_model=FoodEntryOut, status_code=201)

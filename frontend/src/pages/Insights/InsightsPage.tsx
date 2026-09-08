@@ -19,7 +19,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { PieChart } from "@mui/x-charts/PieChart";
-import { useMyEntries } from "../../hooks/useMyEntries";
+import { useMyEntries, useMyEntriesCount } from "../../hooks/useMyEntries";
 import type { FoodEntry, User } from "../../types";
 
 interface InsightsPageProps {
@@ -115,6 +115,7 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
 
   const dateFrom = rangeConfig.days === null ? undefined : isoDaysAgo(rangeConfig.days - 1);
   const { data: entries = [], isLoading } = useMyEntries({ date_from: dateFrom, date_to: todayIso() });
+  const { data: entriesTotal = 0 } = useMyEntriesCount({ date_from: dateFrom, date_to: todayIso() });
 
   const dailyTotals = useMemo(() => {
     const byDay = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
@@ -304,7 +305,7 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
             <StatCard
               icon={<TrendingUpIcon fontSize="small" />}
               label="Total entries"
-              value={`${entries.length}`}
+              value={`${entriesTotal}`}
               hint={`In ${rangeConfig.label.toLowerCase()}`}
             />
           </Stack>

@@ -115,3 +115,7 @@ class PaginatedAdminFoodEntries(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class FoodEntryCount(BaseModel):
+    total: int

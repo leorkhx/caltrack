@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import ShieldIcon from "@mui/icons-material/Shield";
 import PersonIcon from "@mui/icons-material/Person";
@@ -80,17 +80,10 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const loggableUsers = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
 
   const {
-    data: entriesData,
+    data: statsData,
     isLoading: loading,
     isError,
   } = useAdminEntries({
-    user_id: selectedUserId ?? undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo || undefined,
-    page,
-    page_size: PAGE_SIZE,
-  });
-  const { data: statsData } = useAdminEntries({
     user_id: selectedUserId ?? undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
@@ -105,8 +98,8 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   );
   const { create, update, remove } = useAdminEntryMutations();
 
-  const rawEntries = entriesData?.items ?? [];
-  const total = entriesData?.total ?? 0;
+  const rawEntries = statsData?.items ?? [];
+  const total = statsData?.total ?? 0;
 
   const stats = useMemo(() => {
     const statsEntries = statsData?.items ?? [];
@@ -145,7 +138,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
     });
   };
 
-  const entries = useMemo(() => {
+  const filteredEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
     let list = query ? rawEntries.filter((e) => e.food_name.toLowerCase().includes(query)) : rawEntries;
 
@@ -174,6 +167,13 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
     }
     return list;
   }, [rawEntries, search, filterOptions, sortMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterOptions, sortMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
+  const entries = filteredEntries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const userLimitMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -224,8 +224,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
       setDateTo(todayIso());
     }
   };
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <Box>

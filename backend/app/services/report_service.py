@@ -103,7 +103,12 @@ def build_reports(
     if user_id is not None:
         daily_query = daily_query.filter(FoodEntry.user_id == user_id)
     daily_rows = daily_query.group_by(func.date(FoodEntry.consumed_at)).all()
-    totals_by_day = {row.day: (row.total_calories, row.entries_count) for row in daily_rows}
+    # `func.date(...)` can come back as a string or a native date object
+    # depending on the DB driver — normalize to an ISO string for a reliable lookup below.
+    totals_by_day = {
+        (row.day if isinstance(row.day, str) else row.day.isoformat()): (row.total_calories, row.entries_count)
+        for row in daily_rows
+    }
     daily_totals: list[DailyTotal] = []
     cursor = start
     while cursor <= end:

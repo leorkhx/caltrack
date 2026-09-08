@@ -9,8 +9,6 @@ cd backend
 python3 -m venv .venv          # any Python 3.9+ interpreter works
 source .venv/bin/activate
 pip install -r requirements.txt
-# Only if you point DATABASE_URL at Postgres/Supabase:
-# pip install psycopg2-binary
 
 alembic upgrade head           # create tables (backend/.env already has working defaults)
 
@@ -75,10 +73,7 @@ every endpoint via `app/schemas/user.py` / `app/api/users.py::get_me`.
 
 ## Database
 
-Defaults to SQLite (`sqlite:///./app.db`), zero setup. To use Postgres/Supabase,
-set `DATABASE_URL=postgresql://...` in `.env` and `pip install psycopg2-binary`.
-No SQLite-only types are used, so the same models and migrations work
-unmodified against Postgres.
+SQLite (`sqlite:///./app.db`), zero setup — no server or credentials needed.
 
 ## Structure
 

@@ -7,7 +7,7 @@ changes.
 
 - **Backend**: FastAPI + SQLAlchemy + Alembic + Pydantic v2, REST API, Swagger docs.
 - **Frontend**: React + TypeScript + Material UI, Vite, React Router.
-- **Database**: SQLite by default (zero setup); swap `DATABASE_URL` for Postgres/Supabase with no code changes.
+- **Database**: SQLite (zero setup) via `DATABASE_URL` in `backend/.env`.
 - **Auth**: predefined per-user Bearer tokens (no signup/login), trivially changeable via env vars.
 - **Autocomplete**: USDA FoodData Central (FDC) API, proxied server-side via `FDC_API_KEY`.
 
@@ -31,7 +31,7 @@ pnpm dev
 # App: http://localhost:3000
 ```
 
-Full details (tokens, per-user calorie limits, Postgres setup) are in
+Full details (tokens, per-user calorie limits) are in
 `backend/README.md` and `frontend/README.md`.
 
 ### Run both at once
@@ -65,27 +65,6 @@ sqlite> select * from food_entries limit 10;
 Or open `backend/app.db` in any SQLite GUI (DB Browser for SQLite, TablePlus,
 DBeaver, the SQLite extension in VS Code, etc.) — no server or credentials
 needed, it's just a file.
-
-To point the app at Postgres/Supabase instead (e.g. for the demo, or because
-you want a persistent shared DB instead of a local file):
-
-1. Get your connection string from Supabase (Project Settings → Database →
-   Connection string → URI), which looks like:
-   `postgresql://postgres:[password]@[host]:5432/postgres`
-2. Set it in `backend/.env`:
-   ```
-   DATABASE_URL=postgresql://postgres:your-password@your-project.supabase.co:5432/postgres
-   ```
-3. Install the Postgres driver and run migrations:
-   ```bash
-   cd backend
-   pip install psycopg2-binary
-   alembic upgrade head
-   ```
-
-No application code changes are needed either way — `app/database.py` reads
-`DATABASE_URL` and only special-cases SQLite's `connect_args`, everything else
-(models, migrations, queries) is portable between the two.
 
 ### Creating users
 
