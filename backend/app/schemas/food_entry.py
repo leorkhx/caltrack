@@ -119,3 +119,10 @@ class PaginatedAdminFoodEntries(BaseModel):
 
 class FoodEntryCount(BaseModel):
     total: int
+
+
+class AdminDayStatsOut(BaseModel):
+    avg_per_logged_day: int
+    days_over_limit: int
+    active_users: int
+    since: Optional[str] = None

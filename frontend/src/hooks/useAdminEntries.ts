@@ -4,8 +4,10 @@ import {
   deleteEntryAsAdmin,
   fetchAllEntries,
   fetchAllUsers,
+  fetchEntryStats,
   updateEntryAsAdmin,
   type AdminListParams,
+  type AdminStatsParams,
 } from "../api/admin";
 import { queryKeys } from "../api/queryClient";
 import type { FoodEntryInput } from "../types";
@@ -21,6 +23,15 @@ export function useAdminEntries(params: AdminListParams, options: { enabled?: bo
   return useQuery({
     queryKey: queryKeys.adminEntries(params),
     queryFn: () => fetchAllEntries(params),
+    placeholderData: (previous) => previous,
+    enabled: options.enabled,
+  });
+}
+
+export function useAdminEntryStats(params: AdminStatsParams, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: queryKeys.adminEntryStats(params),
+    queryFn: () => fetchEntryStats(params),
     placeholderData: (previous) => previous,
     enabled: options.enabled,
   });

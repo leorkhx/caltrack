@@ -21,7 +21,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useAdminEntries, useAdminEntryMutations, useAdminUsers } from "../../hooks/useAdminEntries";
+import { useAdminEntries, useAdminEntryMutations, useAdminEntryStats, useAdminUsers } from "../../hooks/useAdminEntries";
 import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
@@ -31,7 +31,6 @@ import { todayIso } from "../../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput } from "../../types";
 
 const PAGE_SIZE = 20;
-const STATS_PAGE_SIZE = 200;
 
 const QUICK_RANGES = [
   { label: "7d", days: 7 },
@@ -79,55 +78,56 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const { data: users = [] } = useAdminUsers();
   const loggableUsers = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
 
+  // "over"/"within" only makes sense as a single value server-side; selecting
+  // both (or "all") means no day-status filter at all.
+  const dayStatus: "over" | "within" | undefined =
+    filterOptions.includes("all") || (filterOptions.includes("over") && filterOptions.includes("within"))
+      ? undefined
+      : filterOptions.includes("over")
+        ? "over"
+        : filterOptions.includes("within")
+          ? "within"
+          : undefined;
+
   const {
-    data: statsData,
+    data: pageData,
     isLoading: loading,
     isError,
   } = useAdminEntries({
     user_id: selectedUserId ?? undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
-    page: 1,
-    page_size: STATS_PAGE_SIZE,
+    page,
+    page_size: PAGE_SIZE,
+    search: search.trim() || undefined,
+    sort: sortMode,
+    day_status: dayStatus,
   });
+
+  const { data: stats = { avg_per_logged_day: 0, days_over_limit: 0, active_users: 0, since: null } } =
+    useAdminEntryStats({
+      user_id: selectedUserId ?? undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
+
   const last7From = isoDaysAgo(6);
   const last7To = todayIso();
-  const { data: selectedUserLast7Data } = useAdminEntries(
-    { user_id: selectedUserId ?? undefined, date_from: last7From, date_to: last7To, page: 1, page_size: STATS_PAGE_SIZE },
+  const { data: selectedUserLast7Stats } = useAdminEntryStats(
+    { user_id: selectedUserId ?? undefined, date_from: last7From, date_to: last7To },
     { enabled: selectedUserId !== null }
   );
   const { create, update, remove } = useAdminEntryMutations();
 
-  const rawEntries = statsData?.items ?? [];
-  const total = statsData?.total ?? 0;
-
-  const stats = useMemo(() => {
-    const statsEntries = statsData?.items ?? [];
-    const buckets = new Map<string, { userId: number; total: number; limit: number }>();
-    let earliest: string | null = null;
-    statsEntries.forEach((e) => {
-      const day = e.consumed_at.slice(0, 10);
-      if (earliest === null || day < earliest) earliest = day;
-      const key = `${e.user_id}_${day}`;
-      const bucket = buckets.get(key) ?? { userId: e.user_id, total: 0, limit: e.user_daily_limit };
-      bucket.total += e.calories;
-      buckets.set(key, bucket);
-    });
-    const bucketList = Array.from(buckets.values());
-    const avgPerLoggedDay = bucketList.length
-      ? Math.round(bucketList.reduce((sum, b) => sum + b.total, 0) / bucketList.length)
-      : 0;
-    const daysOverLimit = bucketList.filter((b) => b.total > b.limit).length;
-    const activeUsers = new Set(statsEntries.map((e) => e.user_id)).size;
-    return { avgPerLoggedDay, daysOverLimit, activeUsers, since: dateFrom || earliest };
-  }, [statsData, dateFrom]);
+  const entries = pageData?.items ?? [];
+  const total = pageData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const selectedUserLast7Avg = useMemo(() => {
-    if (selectedUserId === null) return 0;
-    const items = selectedUserLast7Data?.items ?? [];
-    const total = items.reduce((sum, e) => sum + e.calories, 0);
-    return Math.round(total / 7);
-  }, [selectedUserId, selectedUserLast7Data]);
+    if (selectedUserId === null || !selectedUserLast7Stats) return 0;
+    // avg_per_logged_day is already a per-day average across logged days.
+    return selectedUserLast7Stats.avg_per_logged_day;
+  }, [selectedUserId, selectedUserLast7Stats]);
 
   const toggleFilterOption = (option: EntryFilterOption) => {
     setFilterOptions((prev) => {
@@ -138,42 +138,9 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
     });
   };
 
-  const filteredEntries = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    let list = query ? rawEntries.filter((e) => e.food_name.toLowerCase().includes(query)) : rawEntries;
-
-    if (!filterOptions.includes("all")) {
-      list = list.filter((e) => {
-        const over = e.day_total > e.user_daily_limit;
-        return (filterOptions.includes("over") && over) || (filterOptions.includes("within") && !over);
-      });
-    }
-
-    list = [...list];
-    switch (sortMode) {
-      case "date_asc":
-        list.sort((a, b) => (a.consumed_at < b.consumed_at ? -1 : 1));
-        break;
-      case "calories_desc":
-        list.sort((a, b) => b.calories - a.calories);
-        break;
-      case "calories_asc":
-        list.sort((a, b) => a.calories - b.calories);
-        break;
-      case "date_desc":
-      default:
-        list.sort((a, b) => (a.consumed_at > b.consumed_at ? -1 : 1));
-        break;
-    }
-    return list;
-  }, [rawEntries, search, filterOptions, sortMode]);
-
   useEffect(() => {
     setPage(1);
-  }, [search, filterOptions, sortMode]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
-  const entries = filteredEntries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [search, filterOptions, sortMode, selectedUserId, dateFrom, dateTo]);
 
   const userLimitMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -183,17 +150,16 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const computeExistingTotal = useCallback(
     (userId: number, dateIso: string, excludeEntryId: number | null) => {
-      // Best-effort using the currently loaded page; admin dataset can be large,
-      // so this is an approximation for the dialog's "projected total" preview.
-      // The per-row over/under-limit indicator below uses the backend's exact
-      // day_total instead.
-      return rawEntries
+      // Best-effort using the currently loaded page; the dialog's "projected
+      // total" preview is just a hint. The per-row over/under-limit indicator
+      // below uses the backend's exact day_total instead.
+      return entries
         .filter(
           (e) => e.user_id === userId && e.consumed_at.slice(0, 10) === dateIso && e.id !== excludeEntryId
         )
         .reduce((sum, e) => sum + e.calories, 0);
     },
-    [rawEntries]
+    [entries]
   );
 
   const handleSave = async (input: FoodEntryInput) => {
@@ -267,7 +233,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
           <StatCard
             icon={<GroupIcon fontSize="small" />}
             label="Active users"
-            value={stats.activeUsers}
+            value={stats.active_users}
             note="Logged at least one entry"
           />
         ) : (
@@ -281,17 +247,17 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
         <StatCard
           icon={<MonitorHeartIcon fontSize="small" />}
           label="Avg calories / logged day"
-          value={stats.avgPerLoggedDay}
+          value={stats.avg_per_logged_day}
           note="Averaged across every user-day with an entry"
         />
         <StatCard
           icon={<WarningAmberIcon fontSize="small" />}
           label="Days over limit"
-          value={stats.daysOverLimit}
+          value={stats.days_over_limit}
           tint="rgba(229,72,77,0.12)"
           iconColor="#c93a3f"
           note={
-            stats.daysOverLimit === 0
+            stats.days_over_limit === 0
               ? "Clean streak so far — keep it up"
               : stats.since
                 ? `Since ${new Date(`${stats.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`

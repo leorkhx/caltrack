@@ -6,6 +6,25 @@ export interface AdminListParams extends DateRangeParams {
   user_id?: number;
   page?: number;
   page_size?: number;
+  search?: string;
+  sort?: string;
+  day_status?: "over" | "within";
+}
+
+export interface AdminStatsParams extends DateRangeParams {
+  user_id?: number;
+}
+
+export interface AdminDayStats {
+  avg_per_logged_day: number;
+  days_over_limit: number;
+  active_users: number;
+  since: string | null;
+}
+
+export async function fetchEntryStats(params: AdminStatsParams = {}): Promise<AdminDayStats> {
+  const { data } = await apiClient.get<AdminDayStats>("/api/admin/food-entries/stats", { params });
+  return data;
 }
 
 export async function fetchAllUsers(): Promise<User[]> {

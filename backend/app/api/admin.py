@@ -9,6 +9,7 @@ from app.dependencies.auth import require_admin
 from app.models.food_entry import FoodEntry
 from app.models.user import User
 from app.schemas.food_entry import (
+    AdminDayStatsOut,
     AdminFoodEntryCreate,
     AdminFoodEntryOut,
     FoodEntryUpdate,
@@ -54,16 +55,38 @@ def list_all_entries(
     date_to: Optional[date] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
+    search: Optional[str] = None,
+    sort: str = "date_desc",
+    day_status: Optional[str] = None,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    items, total = food_entry_service.list_entries_admin(db, user_id, date_from, date_to, page, page_size)
+    items, total = food_entry_service.list_entries_admin(
+        db, user_id, date_from, date_to, page, page_size, search, sort, day_status
+    )
     day_totals = food_entry_service.day_totals_for(db, items)
     return PaginatedAdminFoodEntries(
         items=[_to_admin_out(e, day_totals.get((e.user_id, e.consumed_at.date()), e.calories)) for e in items],
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get("/food-entries/stats", response_model=AdminDayStatsOut)
+def get_entries_stats(
+    user_id: Optional[int] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    stats = food_entry_service.get_admin_day_stats(db, user_id, date_from, date_to)
+    return AdminDayStatsOut(
+        avg_per_logged_day=stats["avg_per_logged_day"],
+        days_over_limit=stats["days_over_limit"],
+        active_users=stats["active_users"],
+        since=str(stats["since"]) if stats["since"] else None,
     )
 
 

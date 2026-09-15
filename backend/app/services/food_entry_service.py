@@ -69,6 +69,14 @@ def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date]
     return totals
 
 
+_SORT_COLUMNS = {
+    "date_desc": FoodEntry.consumed_at.desc(),
+    "date_asc": FoodEntry.consumed_at.asc(),
+    "calories_desc": FoodEntry.calories.desc(),
+    "calories_asc": FoodEntry.calories.asc(),
+}
+
+
 def list_entries_admin(
     db: Session,
     user_id: Optional[int] = None,
@@ -76,6 +84,9 @@ def list_entries_admin(
     date_to: Optional[date] = None,
     page: int = 1,
     page_size: int = 20,
+    search: Optional[str] = None,
+    sort: str = "date_desc",
+    day_status: Optional[str] = None,
 ):
     query = db.query(FoodEntry).options(joinedload(FoodEntry.user))
     if user_id is not None:
@@ -85,14 +96,83 @@ def list_entries_admin(
         query = query.filter(FoodEntry.consumed_at >= start)
     if end:
         query = query.filter(FoodEntry.consumed_at <= end)
+    if search:
+        query = query.filter(FoodEntry.food_name.ilike(f"%{search}%"))
+
+    if day_status in ("over", "within"):
+        day_col = func.date(FoodEntry.consumed_at)
+        day_totals_subq = (
+            db.query(
+                FoodEntry.user_id.label("user_id"),
+                day_col.label("day"),
+                func.sum(FoodEntry.calories).label("day_total"),
+            )
+            .group_by(FoodEntry.user_id, day_col)
+            .subquery()
+        )
+        query = (
+            query.join(User, User.id == FoodEntry.user_id)
+            .join(
+                day_totals_subq,
+                (day_totals_subq.c.user_id == FoodEntry.user_id)
+                & (day_totals_subq.c.day == day_col),
+            )
+        )
+        if day_status == "over":
+            query = query.filter(day_totals_subq.c.day_total > User.daily_calorie_limit)
+        else:
+            query = query.filter(day_totals_subq.c.day_total <= User.daily_calorie_limit)
+
     total = query.count()
     items = (
-        query.order_by(FoodEntry.consumed_at.desc())
+        query.order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["date_desc"]))
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )
     return items, total
+
+
+def get_admin_day_stats(
+    db: Session,
+    user_id: Optional[int] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+):
+    """Per-(user, day) calorie totals computed by the DB via GROUP BY, so this
+    scales to any table size instead of summing rows fetched into memory."""
+    day_col = func.date(FoodEntry.consumed_at)
+    query = (
+        db.query(
+            FoodEntry.user_id,
+            day_col.label("day"),
+            func.sum(FoodEntry.calories).label("total"),
+            User.daily_calorie_limit,
+        )
+        .join(User, User.id == FoodEntry.user_id)
+    )
+    if user_id is not None:
+        query = query.filter(FoodEntry.user_id == user_id)
+    start, end = _date_bounds(date_from, date_to)
+    if start:
+        query = query.filter(FoodEntry.consumed_at >= start)
+    if end:
+        query = query.filter(FoodEntry.consumed_at <= end)
+    rows = query.group_by(FoodEntry.user_id, day_col, User.daily_calorie_limit).all()
+
+    if not rows:
+        return {"avg_per_logged_day": 0, "days_over_limit": 0, "active_users": 0, "since": None}
+
+    totals = [r.total for r in rows]
+    days_over_limit = sum(1 for r in rows if r.total > r.daily_calorie_limit)
+    active_users = len({r.user_id for r in rows})
+    since = min(r.day for r in rows)
+    return {
+        "avg_per_logged_day": round(sum(totals) / len(totals)),
+        "days_over_limit": days_over_limit,
+        "active_users": active_users,
+        "since": since,
+    }
 
 
 def create_entry_for_self(db: Session, user: User, payload: FoodEntryCreate) -> FoodEntry:
