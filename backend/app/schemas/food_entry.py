@@ -113,8 +113,8 @@ class AdminFoodEntryOut(FoodEntryOut):
 class PaginatedAdminFoodEntries(BaseModel):
     items: list[AdminFoodEntryOut]
     total: int
-    page: int
     page_size: int
+    next_cursor: Optional[str] = None
 
 
 class FoodEntryCount(BaseModel):

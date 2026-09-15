@@ -25,11 +25,16 @@ export const queryKeys = {
     user_id?: number;
     date_from?: string;
     date_to?: string;
-    page?: number;
+    cursor?: string;
     page_size?: number;
+    search?: string;
+    sort?: string;
+    day_status?: string;
   }) => ["admin-entries", params] as const,
   adminEntryStats: (params: { user_id?: number; date_from?: string; date_to?: string }) =>
     ["admin-entry-stats", params] as const,
+  adminTotalCalories: (params: { user_id: number; date_from?: string; date_to?: string }) =>
+    ["admin-total-calories", params] as const,
   reports: (params: { days?: number; all?: boolean; user_id?: number }) => ["reports", params] as const,
   topFoods: (params: { days?: number; all?: boolean; page?: number; page_size?: number }) => ["top-foods", params] as const,
   favorites: ["favorites"] as const,

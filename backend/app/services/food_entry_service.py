@@ -69,12 +69,27 @@ def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date]
     return totals
 
 
-_SORT_COLUMNS = {
-    "date_desc": FoodEntry.consumed_at.desc(),
-    "date_asc": FoodEntry.consumed_at.asc(),
-    "calories_desc": FoodEntry.calories.desc(),
-    "calories_asc": FoodEntry.calories.asc(),
+# Each sort mode pairs a primary column with `id` as a tiebreaker, so a
+# cursor (last-seen primary value + id) uniquely identifies "where to
+# continue from" with no offset/page-number involved.
+_SORT_SPECS = {
+    "date_desc": (FoodEntry.consumed_at, "desc", lambda e: e.consumed_at.isoformat()),
+    "date_asc": (FoodEntry.consumed_at, "asc", lambda e: e.consumed_at.isoformat()),
+    "calories_desc": (FoodEntry.calories, "desc", lambda e: e.calories),
+    "calories_asc": (FoodEntry.calories, "asc", lambda e: e.calories),
 }
+
+
+def encode_cursor(entry: FoodEntry, sort: str) -> str:
+    _, _, value_fn = _SORT_SPECS.get(sort, _SORT_SPECS["date_desc"])
+    return f"{value_fn(entry)}|{entry.id}"
+
+
+def _decode_cursor(cursor: str, sort: str):
+    value_str, id_str = cursor.rsplit("|", 1)
+    if sort.startswith("calories"):
+        return int(value_str), int(id_str)
+    return datetime.fromisoformat(value_str), int(id_str)
 
 
 def list_entries_admin(
@@ -82,7 +97,7 @@ def list_entries_admin(
     user_id: Optional[int] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
-    page: int = 1,
+    cursor: Optional[str] = None,
     page_size: int = 20,
     search: Optional[str] = None,
     sort: str = "date_desc",
@@ -124,13 +139,23 @@ def list_entries_admin(
             query = query.filter(day_totals_subq.c.day_total <= User.daily_calorie_limit)
 
     total = query.count()
-    items = (
-        query.order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["date_desc"]))
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
-    return items, total
+
+    primary_col, direction, _ = _SORT_SPECS.get(sort, _SORT_SPECS["date_desc"])
+    if cursor:
+        last_value, last_id = _decode_cursor(cursor, sort)
+        if direction == "desc":
+            query = query.filter(
+                (primary_col < last_value) | ((primary_col == last_value) & (FoodEntry.id < last_id))
+            )
+        else:
+            query = query.filter(
+                (primary_col > last_value) | ((primary_col == last_value) & (FoodEntry.id > last_id))
+            )
+
+    order = (primary_col.desc(), FoodEntry.id.desc()) if direction == "desc" else (primary_col.asc(), FoodEntry.id.asc())
+    items = query.order_by(*order).limit(page_size).all()
+    next_cursor = encode_cursor(items[-1], sort) if len(items) == page_size else None
+    return items, total, next_cursor
 
 
 def get_admin_day_stats(
@@ -173,6 +198,20 @@ def get_admin_day_stats(
         "active_users": active_users,
         "since": since,
     }
+
+
+def get_total_calories(
+    db: Session, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None
+) -> int:
+    """Plain SUM(calories) over the range — a true period average divides this
+    by the number of days in the range, including days with no entries."""
+    query = db.query(func.sum(FoodEntry.calories)).filter(FoodEntry.user_id == user_id)
+    start, end = _date_bounds(date_from, date_to)
+    if start:
+        query = query.filter(FoodEntry.consumed_at >= start)
+    if end:
+        query = query.filter(FoodEntry.consumed_at <= end)
+    return query.scalar() or 0
 
 
 def create_entry_for_self(db: Session, user: User, payload: FoodEntryCreate) -> FoodEntry:

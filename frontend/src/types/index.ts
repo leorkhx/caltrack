@@ -60,8 +60,8 @@ export interface AdminFoodEntry extends FoodEntry {
 export interface PaginatedAdminFoodEntries {
   items: AdminFoodEntry[];
   total: number;
-  page: number;
   page_size: number;
+  next_cursor: string | null;
 }
 
 export interface FoodEntryInput {

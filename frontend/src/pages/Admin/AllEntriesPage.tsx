@@ -21,7 +21,13 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useAdminEntries, useAdminEntryMutations, useAdminEntryStats, useAdminUsers } from "../../hooks/useAdminEntries";
+import {
+  useAdminEntries,
+  useAdminEntryMutations,
+  useAdminEntryStats,
+  useAdminTotalCalories,
+  useAdminUsers,
+} from "../../hooks/useAdminEntries";
 import { DashboardFilterNav, type EntryFilterOption, type EntrySortMode } from "../../components/DashboardFilterNav";
 import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
@@ -67,7 +73,11 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [rangeDays, setRangeDays] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
+  // Cursor-based paging: no page numbers/offset. Each entry is the cursor to
+  // start that page from (undefined = first page); moving "next" appends the
+  // cursor the server just gave us, moving "prev" just steps back the index.
+  const [cursorStack, setCursorStack] = useState<(string | undefined)[]>([undefined]);
+  const [pageIndex, setPageIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<AdminFoodEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminFoodEntry | null>(null);
@@ -97,7 +107,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
     user_id: selectedUserId ?? undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
-    page,
+    cursor: cursorStack[pageIndex],
     page_size: PAGE_SIZE,
     search: search.trim() || undefined,
     sort: sortMode,
@@ -113,21 +123,36 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const last7From = isoDaysAgo(6);
   const last7To = todayIso();
-  const { data: selectedUserLast7Stats } = useAdminEntryStats(
-    { user_id: selectedUserId ?? undefined, date_from: last7From, date_to: last7To },
+  const { data: selectedUserLast7Totals } = useAdminTotalCalories(
+    { user_id: selectedUserId ?? 0, date_from: last7From, date_to: last7To },
     { enabled: selectedUserId !== null }
   );
   const { create, update, remove } = useAdminEntryMutations();
 
   const entries = pageData?.items ?? [];
   const total = pageData?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasNextPage = Boolean(pageData?.next_cursor);
+  const hasPrevPage = pageIndex > 0;
+
+  const goNext = () => {
+    if (!pageData?.next_cursor) return;
+    setCursorStack((prev) => {
+      if (pageIndex + 1 < prev.length) return prev; // already fetched this cursor before
+      return [...prev, pageData.next_cursor ?? undefined];
+    });
+    setPageIndex((p) => p + 1);
+  };
+
+  const goPrev = () => {
+    setPageIndex((p) => Math.max(0, p - 1));
+  };
 
   const selectedUserLast7Avg = useMemo(() => {
-    if (selectedUserId === null || !selectedUserLast7Stats) return 0;
-    // avg_per_logged_day is already a per-day average across logged days.
-    return selectedUserLast7Stats.avg_per_logged_day;
-  }, [selectedUserId, selectedUserLast7Stats]);
+    if (selectedUserId === null || !selectedUserLast7Totals) return 0;
+    // True 7-day average: total calories over the window / 7, including
+    // any days the user didn't log at all.
+    return Math.round(selectedUserLast7Totals.total_calories / 7);
+  }, [selectedUserId, selectedUserLast7Totals]);
 
   const toggleFilterOption = (option: EntryFilterOption) => {
     setFilterOptions((prev) => {
@@ -139,7 +164,8 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   };
 
   useEffect(() => {
-    setPage(1);
+    setCursorStack([undefined]);
+    setPageIndex(0);
   }, [search, filterOptions, sortMode, selectedUserId, dateFrom, dateTo]);
 
   const userLimitMap = useMemo(() => {
@@ -181,7 +207,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const setQuickRange = (days: number | null) => {
     setRangeDays(days);
-    setPage(1);
     if (days === null) {
       setDateFrom("");
       setDateTo("");
@@ -269,14 +294,8 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
       <DashboardFilterNav
         dateFrom={dateFrom}
         dateTo={dateTo}
-        onDateFromChange={(v) => {
-          setDateFrom(v);
-          setPage(1);
-        }}
-        onDateToChange={(v) => {
-          setDateTo(v);
-          setPage(1);
-        }}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
         quickRanges={QUICK_RANGES}
         onQuickRange={setQuickRange}
         activeRangeDays={rangeDays}
@@ -292,7 +311,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
             value={selectedUserId ?? "all"}
             onChange={(e) => {
               setSelectedUserId(e.target.value === "all" ? null : Number(e.target.value));
-              setPage(1);
             }}
             startAdornment={<PersonIcon sx={{ fontSize: 18, color: "text.secondary", mr: 0.75 }} />}
             sx={{ minWidth: 170, bgcolor: "#fff", borderRadius: "15px" }}
@@ -360,13 +378,13 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
             sx={{ px: 2, pt: 2, pb: 1, borderTop: "1px solid rgba(23,26,40,0.06)", mt: 1 }}
           >
             <Typography fontSize={13} fontWeight={600} color="text.secondary">
-              Page {page} of {totalPages}
+              Showing {entries.length} of {total} {total === 1 ? "entry" : "entries"}
             </Typography>
             <Stack direction="row" gap={1}>
-              <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <IconButton size="small" disabled={!hasPrevPage} onClick={goPrev}>
                 <ChevronLeftIcon />
               </IconButton>
-              <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <IconButton size="small" disabled={!hasNextPage} onClick={goNext}>
                 <ChevronRightIcon />
               </IconButton>
             </Stack>

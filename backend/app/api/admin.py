@@ -53,7 +53,7 @@ def list_all_entries(
     user_id: Optional[int] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
-    page: int = Query(1, ge=1),
+    cursor: Optional[str] = None,
     page_size: int = Query(20, ge=1, le=200),
     search: Optional[str] = None,
     sort: str = "date_desc",
@@ -61,15 +61,15 @@ def list_all_entries(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    items, total = food_entry_service.list_entries_admin(
-        db, user_id, date_from, date_to, page, page_size, search, sort, day_status
+    items, total, next_cursor = food_entry_service.list_entries_admin(
+        db, user_id, date_from, date_to, cursor, page_size, search, sort, day_status
     )
     day_totals = food_entry_service.day_totals_for(db, items)
     return PaginatedAdminFoodEntries(
         items=[_to_admin_out(e, day_totals.get((e.user_id, e.consumed_at.date()), e.calories)) for e in items],
         total=total,
-        page=page,
         page_size=page_size,
+        next_cursor=next_cursor,
     )
 
 
@@ -88,6 +88,17 @@ def get_entries_stats(
         active_users=stats["active_users"],
         since=str(stats["since"]) if stats["since"] else None,
     )
+
+
+@router.get("/food-entries/total-calories")
+def get_total_calories(
+    user_id: int,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    return {"total_calories": food_entry_service.get_total_calories(db, user_id, date_from, date_to)}
 
 
 @router.post("/food-entries", response_model=AdminFoodEntryOut, status_code=201)

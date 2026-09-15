@@ -5,9 +5,11 @@ import {
   fetchAllEntries,
   fetchAllUsers,
   fetchEntryStats,
+  fetchTotalCalories,
   updateEntryAsAdmin,
   type AdminListParams,
   type AdminStatsParams,
+  type TotalCaloriesParams,
 } from "../api/admin";
 import { queryKeys } from "../api/queryClient";
 import type { FoodEntryInput } from "../types";
@@ -32,6 +34,15 @@ export function useAdminEntryStats(params: AdminStatsParams, options: { enabled?
   return useQuery({
     queryKey: queryKeys.adminEntryStats(params),
     queryFn: () => fetchEntryStats(params),
+    placeholderData: (previous) => previous,
+    enabled: options.enabled,
+  });
+}
+
+export function useAdminTotalCalories(params: TotalCaloriesParams, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: queryKeys.adminTotalCalories(params),
+    queryFn: () => fetchTotalCalories(params),
     placeholderData: (previous) => previous,
     enabled: options.enabled,
   });

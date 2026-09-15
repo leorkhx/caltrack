@@ -4,7 +4,7 @@ import type { DateRangeParams } from "./foodEntries";
 
 export interface AdminListParams extends DateRangeParams {
   user_id?: number;
-  page?: number;
+  cursor?: string;
   page_size?: number;
   search?: string;
   sort?: string;
@@ -71,5 +71,16 @@ export interface TopFoodsParams {
 
 export async function fetchTopFoods(params: TopFoodsParams = {}): Promise<TopFoodsData> {
   const { data } = await apiClient.get<TopFoodsData>("/api/admin/foods/top", { params });
+  return data;
+}
+
+export interface TotalCaloriesParams extends DateRangeParams {
+  user_id: number;
+}
+
+export async function fetchTotalCalories(params: TotalCaloriesParams): Promise<{ total_calories: number }> {
+  const { data } = await apiClient.get<{ total_calories: number }>("/api/admin/food-entries/total-calories", {
+    params,
+  });
   return data;
 }
