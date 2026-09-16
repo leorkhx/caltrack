@@ -33,7 +33,7 @@ import { EntryRow } from "../../components/EntryRow";
 import { EntryDialog } from "../../components/EntryDialog";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StatCard } from "../../components/StatCard";
-import { todayIso } from "../../utils/validation";
+import { localDateKey, todayIso } from "../../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput } from "../../types";
 
 const PAGE_SIZE = 20;
@@ -181,7 +181,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
       // below uses the backend's exact day_total instead.
       return entries
         .filter(
-          (e) => e.user_id === userId && e.consumed_at.slice(0, 10) === dateIso && e.id !== excludeEntryId
+          (e) => e.user_id === userId && localDateKey(e.consumed_at) === dateIso && e.id !== excludeEntryId
         )
         .reduce((sum, e) => sum + e.calories, 0);
     },

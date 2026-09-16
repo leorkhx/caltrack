@@ -18,7 +18,7 @@ import LunchDiningIcon from "@mui/icons-material/LunchDining";
 import DinnerDiningIcon from "@mui/icons-material/DinnerDining";
 import CookieIcon from "@mui/icons-material/Cookie";
 import type { FoodEntry, FoodEntryInput, MealType, User } from "../../types";
-import { todayIso } from "../../utils/validation";
+import { localDateKey, todayIso } from "../../utils/validation";
 
 const MEAL_SECTIONS: { type: MealType; label: string; icon: React.ReactElement }[] = [
   { type: "breakfast", label: "Breakfast", icon: <WbSunnyIcon sx={{ fontSize: 14 }} /> },
@@ -33,9 +33,7 @@ function isoDaysAgo(days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function dateKey(iso: string): string {
-  return iso.slice(0, 10);
-}
+const dateKey = localDateKey;
 
 const QUICK_RANGES = [
   { label: "7d", days: 7 },

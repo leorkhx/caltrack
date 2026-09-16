@@ -26,7 +26,7 @@ import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { searchFoods } from "../api/foods";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useFavorites, useFavoriteMutations } from "../hooks/useFavorites";
-import { validateEntryForm, hasErrors, type EntryFormErrors } from "../utils/validation";
+import { validateEntryForm, hasErrors, localDateKey, type EntryFormErrors } from "../utils/validation";
 import { QUANTITY_UNITS } from "../utils/quantityUnits";
 import type { FoodEntry, FoodEntryInput, FoodSuggestion, MealType, QuantityUnit, User } from "../types";
 
@@ -52,15 +52,14 @@ const MEAL_TYPES: { value: MealType; label: string }[] = [
 ];
 
 function toDateInput(iso: string): string {
-  return iso.slice(0, 10);
+  return localDateKey(iso);
 }
 function toTimeInput(iso: string): string {
   const d = new Date(iso);
   return d.toTimeString().slice(0, 5);
 }
 function nowDate(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return localDateKey(new Date());
 }
 function nowTime(): string {
   return new Date().toTimeString().slice(0, 5);

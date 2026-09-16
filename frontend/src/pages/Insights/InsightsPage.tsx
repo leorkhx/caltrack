@@ -20,6 +20,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { useMyEntries, useMyEntriesCount } from "../../hooks/useMyEntries";
+import { localDateKey } from "../../utils/validation";
 import type { FoodEntry, User } from "../../types";
 
 interface InsightsPageProps {
@@ -121,7 +122,7 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
     const byDay = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
 
     const earliestDay = entries.reduce<string | null>((min, e: FoodEntry) => {
-      const day = e.consumed_at.slice(0, 10);
+      const day = localDateKey(e.consumed_at);
       return min === null || day < min ? day : min;
     }, null);
     const startDay = dateFrom ?? earliestDay ?? todayIso();
@@ -131,7 +132,7 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
       byDay.set(key, { calories: 0, protein: 0, carbs: 0, fat: 0 });
     }
     for (const entry of entries) {
-      const day = entry.consumed_at.slice(0, 10);
+      const day = localDateKey(entry.consumed_at);
       const bucket = byDay.get(day);
       if (!bucket) continue;
       bucket.calories += entry.calories;

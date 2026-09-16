@@ -17,7 +17,15 @@ export interface EntryFormErrors {
 }
 
 function todayIso(): string {
-  const d = new Date();
+  return localDateKey(new Date());
+}
+
+/** The calendar day a UTC timestamp falls on in the browser's local timezone.
+ * Slicing the ISO string instead (e.g. "2026-09-15T04:30:00Z".slice(0, 10))
+ * gives the UTC day, which is wrong for anyone not in UTC and misfiles
+ * entries logged near midnight into the wrong day. */
+function localDateKey(value: string | Date): string {
+  const d = typeof value === "string" ? new Date(value) : value;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -67,4 +75,4 @@ export function hasErrors(errors: EntryFormErrors): boolean {
   return Boolean(errors.foodName || errors.calories || errors.quantity || errors.date);
 }
 
-export { todayIso };
+export { todayIso, localDateKey };
