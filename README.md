@@ -1,5 +1,10 @@
 # CalTrack
 
+- **Admin entries list was silently truncating data** past a fixed page size. Now uses real cursor-based pagination and server-side stats aggregation.
+- **Timestamps had no UTC marker**, so the browser misread them as local time — caused wrong day-bucketing, unreliable daily totals, and entries near midnight sometimes not appearing. Fixed end-to-end (API, date filters, admin reports/stats).
+- **The entry form allowed submitting with no food name or calories.** Save button is now disabled until the form is valid.
+- **Unit tests added** for all of the above — `backend/tests/` (pytest), `frontend/src/utils/*.test.ts` (Vitest).
+
 A calorie-tracking app. "CalTrack" is
 just the default display name — it's set via `APP_NAME` (backend) and
 `VITE_APP_NAME` (frontend) env vars, so rebranding is a one-line edit, no code
@@ -48,6 +53,18 @@ This does **not** replace the one-time backend setup (venv, `pip install`,
 `alembic upgrade head`) — it just launches `uvicorn --reload` and `vite` side
 by side afterwards. See `backend/dev.sh` and the root `package.json` if you
 want to see exactly what it runs.
+
+## Running tests
+
+```bash
+# Backend (pytest) — isolated in-memory SQLite, never touches backend/app.db
+cd backend
+PYTHONPATH=. .venv/bin/python -m pytest tests/
+
+# Frontend (Vitest)
+cd frontend
+pnpm test
+```
 
 ## Connecting to the database
 

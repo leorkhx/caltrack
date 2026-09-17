@@ -13,20 +13,11 @@ from app.schemas.food_entry import AdminFoodEntryCreate, FoodEntryCreate, FoodEn
 MAX_ENTRIES_PER_REQUEST = 2000
 
 
-# date_from/date_to below are exact UTC instants, not calendar dates: the
-# caller (frontend) resolves "today" / a date range to UTC using the
-# viewer's own local timezone before sending it, since the server has no
-# way to know that. Treating a bare calendar date as a UTC boundary here
-# previously caused entries near midnight to fall outside the range for
-# anyone not in UTC — e.g. a just-created entry excluded from "today"'s list.
+# date_from/date_to are exact UTC instants, resolved by the caller from its own local timezone.
 
 
 def local_day_expr(offset_minutes: int):
-    """SQL expression for the viewer-local calendar day of `consumed_at`
-    (stored in UTC). `offset_minutes` follows JS's Date.getTimezoneOffset()
-    convention: UTC = local + offset_minutes, so local = UTC - offset_minutes.
-    Grouping by the raw UTC day (plain `func.date(consumed_at)`) puts entries
-    near midnight under the wrong day for anyone not in UTC."""
+    """Viewer-local calendar day for `consumed_at`. offset_minutes follows Date.getTimezoneOffset()."""
     delta_minutes = -offset_minutes
     return func.date(func.datetime(FoodEntry.consumed_at, f"{delta_minutes:+d} minutes"))
 
@@ -79,9 +70,7 @@ def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date]
     return totals
 
 
-# Each sort mode pairs a primary column with `id` as a tiebreaker, so a
-# cursor (last-seen primary value + id) uniquely identifies "where to
-# continue from" with no offset/page-number involved.
+# column + id tiebreaker per sort mode, for cursor pagination
 _SORT_SPECS = {
     "date_desc": (FoodEntry.consumed_at, "desc", lambda e: e.consumed_at.isoformat()),
     "date_asc": (FoodEntry.consumed_at, "asc", lambda e: e.consumed_at.isoformat()),

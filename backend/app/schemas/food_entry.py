@@ -103,11 +103,7 @@ class FoodEntryOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # SQLite stores these as naive datetimes, but they're UTC instants by
-    # convention (the frontend always converts to UTC before sending). Without
-    # an explicit "Z"/offset, `new Date(...)` in the browser treats the string
-    # as already being in the *viewer's* local time instead of converting it —
-    # silently wrong for anyone not in UTC.
+    # Naive datetimes are UTC by convention; mark them explicitly so clients don't misread them as local time.
     @field_validator("consumed_at", "created_at", "updated_at")
     @classmethod
     def _mark_utc(cls, v: datetime) -> datetime:

@@ -12,13 +12,6 @@ from app.schemas.report import DailyTotal, PeriodComparison, ReportsOut, UserAve
 from app.schemas.top_food import TopFood, TopFoodsOut
 from app.services.food_entry_service import local_day_expr
 
-# start/end below are viewer-local calendar dates; consumed_at is stored in
-# UTC, so each is converted to the UTC instant it actually corresponds to
-# (following JS's Date.getTimezoneOffset() convention: UTC = local + offset)
-# before filtering. Comparing a bare local date directly against a UTC column
-# put entries near midnight in the wrong period for anyone not in UTC.
-
-
 def _utc_bounds(start: date, end: date, offset_minutes: int) -> tuple[datetime, datetime]:
     shift = timedelta(minutes=offset_minutes)
     return datetime.combine(start, time.min) + shift, datetime.combine(end, time.max) + shift

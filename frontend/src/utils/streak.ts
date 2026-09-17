@@ -1,7 +1,4 @@
-/** Longest run of consecutive logged, within-limit days anywhere in `days` —
- * not anchored to today, so an old streak still shows up even if nothing's
- * been logged recently. A day with 0 calories (nothing logged) or over the
- * limit breaks the run. */
+// longest run of consecutive logged, within-limit days — not anchored to today
 export function longestStreak(days: { calories: number }[], limit: number): number {
   let best = 0;
   let current = 0;

@@ -73,9 +73,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [rangeDays, setRangeDays] = useState<number | null>(null);
-  // Cursor-based paging: no page numbers/offset. Each entry is the cursor to
-  // start that page from (undefined = first page); moving "next" appends the
-  // cursor the server just gave us, moving "prev" just steps back the index.
   const [cursorStack, setCursorStack] = useState<(string | undefined)[]>([undefined]);
   const [pageIndex, setPageIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,8 +85,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
   const { data: users = [] } = useAdminUsers();
   const loggableUsers = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
 
-  // "over"/"within" only makes sense as a single value server-side; selecting
-  // both (or "all") means no day-status filter at all.
   const dayStatus: "over" | "within" | undefined =
     filterOptions.includes("all") || (filterOptions.includes("over") && filterOptions.includes("within"))
       ? undefined
@@ -149,8 +144,6 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const selectedUserLast7Avg = useMemo(() => {
     if (selectedUserId === null || !selectedUserLast7Totals) return 0;
-    // True 7-day average: total calories over the window / 7, including
-    // any days the user didn't log at all.
     return Math.round(selectedUserLast7Totals.total_calories / 7);
   }, [selectedUserId, selectedUserLast7Totals]);
 
@@ -176,9 +169,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
 
   const computeExistingTotal = useCallback(
     (userId: number, dateIso: string, excludeEntryId: number | null) => {
-      // Best-effort using the currently loaded page; the dialog's "projected
-      // total" preview is just a hint. The per-row over/under-limit indicator
-      // below uses the backend's exact day_total instead.
+      // approximation from the currently loaded page only
       return entries
         .filter(
           (e) => e.user_id === userId && localDateKey(e.consumed_at) === dateIso && e.id !== excludeEntryId
@@ -396,7 +387,7 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
             sx={{ px: 2, pt: 2, pb: 1, borderTop: "1px solid rgba(23,26,40,0.06)", mt: 1 }}
           >
             <Typography fontSize={13} fontWeight={600} color="text.secondary">
-              Showing {entries.length} of {total} {total === 1 ? "entry" : "entries"}
+              Page {pageIndex + 1} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
             </Typography>
             <Stack direction="row" gap={1}>
               <IconButton size="small" disabled={!hasPrevPage} onClick={goPrev}>
