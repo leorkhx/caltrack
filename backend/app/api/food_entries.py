@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -15,8 +15,8 @@ router = APIRouter(prefix="/api/food-entries", tags=["food-entries"])
 
 @router.get("", response_model=list[FoodEntryOut])
 def list_my_entries(
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -25,8 +25,8 @@ def list_my_entries(
 
 @router.get("/count", response_model=FoodEntryCount)
 def count_my_entries(
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

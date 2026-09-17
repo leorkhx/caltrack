@@ -340,11 +340,28 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
             </Typography>
           )}
           <Box sx={{ minWidth: 640 }}>
-          {entries.map((entry) => {
+          {entries.map((entry, i) => {
             const over = entry.day_total > entry.user_daily_limit;
+            const dateLabel = localDateKey(entry.consumed_at);
+            const showDateSeparator = i === 0 || localDateKey(entries[i - 1].consumed_at) !== dateLabel;
             return (
-              <EntryRow
-                key={entry.id}
+              <Box key={entry.id}>
+                {showDateSeparator && (
+                  <Typography
+                    fontSize={12.5}
+                    fontWeight={700}
+                    color="text.secondary"
+                    sx={{ px: 1.5, pt: i === 0 ? 0.5 : 2, pb: 1 }}
+                  >
+                    {new Date(`${dateLabel}T00:00:00`).toLocaleDateString("en-GB", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </Typography>
+                )}
+                <EntryRow
                 entry={entry}
                 onEdit={() => {
                   setEditingEntry(entry);
@@ -367,7 +384,8 @@ export function AllEntriesPage({ currentUserId }: AllEntriesPageProps) {
                     <Chip size="small" color={over ? "error" : "success"} label={over ? "Over" : "OK"} variant="outlined" />
                   </Stack>
                 }
-              />
+                />
+              </Box>
             );
           })}
           </Box>

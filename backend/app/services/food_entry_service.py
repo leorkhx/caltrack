@@ -13,35 +13,35 @@ from app.schemas.food_entry import AdminFoodEntryCreate, FoodEntryCreate, FoodEn
 MAX_ENTRIES_PER_REQUEST = 2000
 
 
-def _date_bounds(date_from: Optional[date], date_to: Optional[date]):
-    start = datetime.combine(date_from, time.min) if date_from else None
-    end = datetime.combine(date_to, time.max) if date_to else None
-    return start, end
+# date_from/date_to below are exact UTC instants, not calendar dates: the
+# caller (frontend) resolves "today" / a date range to UTC using the
+# viewer's own local timezone before sending it, since the server has no
+# way to know that. Treating a bare calendar date as a UTC boundary here
+# previously caused entries near midnight to fall outside the range for
+# anyone not in UTC — e.g. a just-created entry excluded from "today"'s list.
 
 
 def list_entries_for_user(
-    db: Session, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None
+    db: Session, user_id: int, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None
 ) -> list[FoodEntry]:
     query = db.query(FoodEntry).filter(FoodEntry.user_id == user_id)
-    start, end = _date_bounds(date_from, date_to)
-    if start:
-        query = query.filter(FoodEntry.consumed_at >= start)
-    if end:
-        query = query.filter(FoodEntry.consumed_at <= end)
+    if date_from:
+        query = query.filter(FoodEntry.consumed_at >= date_from)
+    if date_to:
+        query = query.filter(FoodEntry.consumed_at <= date_to)
     # Hard cap so a long-lived account with no date filter can't pull its
     # entire history into memory in one request.
     return query.order_by(FoodEntry.consumed_at.desc()).limit(MAX_ENTRIES_PER_REQUEST).all()
 
 
 def count_entries_for_user(
-    db: Session, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None
+    db: Session, user_id: int, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None
 ) -> int:
     query = db.query(func.count(FoodEntry.id)).filter(FoodEntry.user_id == user_id)
-    start, end = _date_bounds(date_from, date_to)
-    if start:
-        query = query.filter(FoodEntry.consumed_at >= start)
-    if end:
-        query = query.filter(FoodEntry.consumed_at <= end)
+    if date_from:
+        query = query.filter(FoodEntry.consumed_at >= date_from)
+    if date_to:
+        query = query.filter(FoodEntry.consumed_at <= date_to)
     return query.scalar() or 0
 
 
@@ -95,8 +95,8 @@ def _decode_cursor(cursor: str, sort: str):
 def list_entries_admin(
     db: Session,
     user_id: Optional[int] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     cursor: Optional[str] = None,
     page_size: int = 20,
     search: Optional[str] = None,
@@ -106,11 +106,10 @@ def list_entries_admin(
     query = db.query(FoodEntry).options(joinedload(FoodEntry.user))
     if user_id is not None:
         query = query.filter(FoodEntry.user_id == user_id)
-    start, end = _date_bounds(date_from, date_to)
-    if start:
-        query = query.filter(FoodEntry.consumed_at >= start)
-    if end:
-        query = query.filter(FoodEntry.consumed_at <= end)
+    if date_from:
+        query = query.filter(FoodEntry.consumed_at >= date_from)
+    if date_to:
+        query = query.filter(FoodEntry.consumed_at <= date_to)
     if search:
         query = query.filter(FoodEntry.food_name.ilike(f"%{search}%"))
 
@@ -161,8 +160,8 @@ def list_entries_admin(
 def get_admin_day_stats(
     db: Session,
     user_id: Optional[int] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
 ):
     """Per-(user, day) calorie totals computed by the DB via GROUP BY, so this
     scales to any table size instead of summing rows fetched into memory."""
@@ -178,11 +177,10 @@ def get_admin_day_stats(
     )
     if user_id is not None:
         query = query.filter(FoodEntry.user_id == user_id)
-    start, end = _date_bounds(date_from, date_to)
-    if start:
-        query = query.filter(FoodEntry.consumed_at >= start)
-    if end:
-        query = query.filter(FoodEntry.consumed_at <= end)
+    if date_from:
+        query = query.filter(FoodEntry.consumed_at >= date_from)
+    if date_to:
+        query = query.filter(FoodEntry.consumed_at <= date_to)
     rows = query.group_by(FoodEntry.user_id, day_col, User.daily_calorie_limit).all()
 
     if not rows:
@@ -201,16 +199,15 @@ def get_admin_day_stats(
 
 
 def get_total_calories(
-    db: Session, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None
+    db: Session, user_id: int, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None
 ) -> int:
     """Plain SUM(calories) over the range — a true period average divides this
     by the number of days in the range, including days with no entries."""
     query = db.query(func.sum(FoodEntry.calories)).filter(FoodEntry.user_id == user_id)
-    start, end = _date_bounds(date_from, date_to)
-    if start:
-        query = query.filter(FoodEntry.consumed_at >= start)
-    if end:
-        query = query.filter(FoodEntry.consumed_at <= end)
+    if date_from:
+        query = query.filter(FoodEntry.consumed_at >= date_from)
+    if date_to:
+        query = query.filter(FoodEntry.consumed_at <= date_to)
     return query.scalar() or 0
 
 

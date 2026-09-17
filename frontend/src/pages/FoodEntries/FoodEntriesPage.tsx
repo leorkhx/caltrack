@@ -146,11 +146,12 @@ export function FoodEntriesPage({ currentUser }: FoodEntriesPageProps) {
         const total = list.reduce((a, e) => a + e.calories, 0);
         const over = total > limit;
         const d = new Date(`${date}T00:00:00`);
+        const fullDate = d.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
         const label =
           date === today
-            ? "Today"
+            ? `Today, ${fullDate}`
             : date === isoDaysAgo(1)
-              ? "Yesterday"
+              ? `Yesterday, ${fullDate}`
               : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
         const hasMacros = list.some((e) => e.protein_g !== null || e.carbs_g !== null || e.fat_g !== null);
         const macroTotals = hasMacros

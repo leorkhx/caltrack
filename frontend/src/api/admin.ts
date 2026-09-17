@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { localRangeToUtc } from "../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput, PaginatedAdminFoodEntries, ReportsData, TopFoodsData, User } from "../types";
 import type { DateRangeParams } from "./foodEntries";
 
@@ -23,7 +24,9 @@ export interface AdminDayStats {
 }
 
 export async function fetchEntryStats(params: AdminStatsParams = {}): Promise<AdminDayStats> {
-  const { data } = await apiClient.get<AdminDayStats>("/api/admin/food-entries/stats", { params });
+  const { data } = await apiClient.get<AdminDayStats>("/api/admin/food-entries/stats", {
+    params: { ...params, ...localRangeToUtc(params) },
+  });
   return data;
 }
 
@@ -33,7 +36,9 @@ export async function fetchAllUsers(): Promise<User[]> {
 }
 
 export async function fetchAllEntries(params: AdminListParams = {}): Promise<PaginatedAdminFoodEntries> {
-  const { data } = await apiClient.get<PaginatedAdminFoodEntries>("/api/admin/food-entries", { params });
+  const { data } = await apiClient.get<PaginatedAdminFoodEntries>("/api/admin/food-entries", {
+    params: { ...params, ...localRangeToUtc(params) },
+  });
   return data;
 }
 
@@ -80,7 +85,7 @@ export interface TotalCaloriesParams extends DateRangeParams {
 
 export async function fetchTotalCalories(params: TotalCaloriesParams): Promise<{ total_calories: number }> {
   const { data } = await apiClient.get<{ total_calories: number }>("/api/admin/food-entries/total-calories", {
-    params,
+    params: { ...params, ...localRangeToUtc(params) },
   });
   return data;
 }

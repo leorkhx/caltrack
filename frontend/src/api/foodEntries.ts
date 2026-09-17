@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { localRangeToUtc } from "../utils/validation";
 import type { FoodEntry, FoodEntryInput } from "../types";
 
 export interface DateRangeParams {
@@ -7,12 +8,14 @@ export interface DateRangeParams {
 }
 
 export async function fetchMyEntries(params: DateRangeParams = {}): Promise<FoodEntry[]> {
-  const { data } = await apiClient.get<FoodEntry[]>("/api/food-entries", { params });
+  const { data } = await apiClient.get<FoodEntry[]>("/api/food-entries", { params: localRangeToUtc(params) });
   return data;
 }
 
 export async function fetchMyEntriesCount(params: DateRangeParams = {}): Promise<number> {
-  const { data } = await apiClient.get<{ total: number }>("/api/food-entries/count", { params });
+  const { data } = await apiClient.get<{ total: number }>("/api/food-entries/count", {
+    params: localRangeToUtc(params),
+  });
   return data.total;
 }
 

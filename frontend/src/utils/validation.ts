@@ -29,6 +29,22 @@ function localDateKey(value: string | Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Converts a "yyyy-mm-dd" date range (the viewer's local calendar days) into
+ * full UTC instants spanning local midnight to local end-of-day. The backend
+ * has no idea what timezone the viewer is in, so it can't safely turn a bare
+ * date into a UTC boundary itself — sending the resolved instant is what lets
+ * e.g. a just-created "now" entry reliably fall inside "today"'s range for
+ * anyone not in UTC. */
+function localRangeToUtc(params: { date_from?: string; date_to?: string }): {
+  date_from?: string;
+  date_to?: string;
+} {
+  return {
+    date_from: params.date_from ? new Date(`${params.date_from}T00:00:00`).toISOString() : undefined,
+    date_to: params.date_to ? new Date(`${params.date_to}T23:59:59.999`).toISOString() : undefined,
+  };
+}
+
 /** Mirrors the backend's Pydantic validation rules so users get instant
  * feedback client-side, while the server still re-validates everything. */
 export function validateEntryForm(values: EntryFormValues): EntryFormErrors {
@@ -75,4 +91,4 @@ export function hasErrors(errors: EntryFormErrors): boolean {
   return Boolean(errors.foodName || errors.calories || errors.quantity || errors.date);
 }
 
-export { todayIso, localDateKey };
+export { todayIso, localDateKey, localRangeToUtc };

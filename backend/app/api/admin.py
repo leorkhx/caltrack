@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -51,8 +51,8 @@ def list_users(db: Session = Depends(get_db), _admin: User = Depends(require_adm
 @router.get("/food-entries", response_model=PaginatedAdminFoodEntries)
 def list_all_entries(
     user_id: Optional[int] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     cursor: Optional[str] = None,
     page_size: int = Query(20, ge=1, le=200),
     search: Optional[str] = None,
@@ -76,8 +76,8 @@ def list_all_entries(
 @router.get("/food-entries/stats", response_model=AdminDayStatsOut)
 def get_entries_stats(
     user_id: Optional[int] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -93,8 +93,8 @@ def get_entries_stats(
 @router.get("/food-entries/total-calories")
 def get_total_calories(
     user_id: int,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):

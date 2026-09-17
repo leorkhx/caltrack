@@ -154,13 +154,20 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
   const daysWithinLimit = daysLogged.filter((d) => d.calories <= limit).length;
 
   const streak = useMemo(() => {
-    let count = 0;
-    for (let i = dailyTotals.length - 1; i >= 0; i--) {
-      const d = dailyTotals[i];
-      if (d.calories > 0 && d.calories <= limit) count++;
-      else break;
+    // Longest run of consecutive logged, within-limit days anywhere in the
+    // range — not anchored to today, so an old streak still shows up even
+    // if nothing's been logged recently.
+    let best = 0;
+    let current = 0;
+    for (const d of dailyTotals) {
+      if (d.calories > 0 && d.calories <= limit) {
+        current++;
+        best = Math.max(best, current);
+      } else {
+        current = 0;
+      }
     }
-    return count;
+    return best;
   }, [dailyTotals, limit]);
 
   const macroTotals = useMemo(() => {
@@ -299,9 +306,9 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
             />
             <StatCard
               icon={<EmojiEventsIcon fontSize="small" />}
-              label="Current streak"
+              label="Best streak"
               value={`${streak} day${streak === 1 ? "" : "s"}`}
-              hint="Consecutive logged days within limit"
+              hint="Longest run of consecutive logged days within limit"
             />
             <StatCard
               icon={<TrendingUpIcon fontSize="small" />}
