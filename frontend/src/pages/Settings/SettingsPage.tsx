@@ -480,7 +480,7 @@ export function SettingsPage({ currentUser }: SettingsPageProps) {
         </Alert>
       )}
 
-      <Button variant="contained" size="large" onClick={handleSave} disabled={isPending || !isDirty} sx={{ mt: 2.5, px: 3 }}>
+      <Button variant="contained" size="large" onClick={handleSave} disabled={isPending || !isDirty || hasErrors} sx={{ mt: 2.5, px: 3 }}>
         {isPending ? "Saving…" : "Save changes"}
       </Button>
     </Box>

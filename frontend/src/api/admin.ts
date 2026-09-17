@@ -37,18 +37,22 @@ export async function fetchAllUsers(): Promise<User[]> {
 
 export async function fetchAllEntries(params: AdminListParams = {}): Promise<PaginatedAdminFoodEntries> {
   const { data } = await apiClient.get<PaginatedAdminFoodEntries>("/api/admin/food-entries", {
-    params: { ...params, ...localRangeToUtc(params) },
+    params: { ...params, ...localRangeToUtc(params), ...tzOffsetParam() },
   });
   return data;
 }
 
 export async function createEntryAsAdmin(input: FoodEntryInput): Promise<AdminFoodEntry> {
-  const { data } = await apiClient.post<AdminFoodEntry>("/api/admin/food-entries", input);
+  const { data } = await apiClient.post<AdminFoodEntry>("/api/admin/food-entries", input, {
+    params: tzOffsetParam(),
+  });
   return data;
 }
 
 export async function updateEntryAsAdmin(id: number, input: Partial<FoodEntryInput>): Promise<AdminFoodEntry> {
-  const { data } = await apiClient.put<AdminFoodEntry>(`/api/admin/food-entries/${id}`, input);
+  const { data } = await apiClient.put<AdminFoodEntry>(`/api/admin/food-entries/${id}`, input, {
+    params: tzOffsetParam(),
+  });
   return data;
 }
 

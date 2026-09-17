@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -58,15 +58,19 @@ def list_all_entries(
     search: Optional[str] = None,
     sort: str = "date_desc",
     day_status: Optional[str] = None,
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
     items, total, next_cursor = food_entry_service.list_entries_admin(
-        db, user_id, date_from, date_to, cursor, page_size, search, sort, day_status
+        db, user_id, date_from, date_to, cursor, page_size, search, sort, day_status, tz_offset_minutes
     )
-    day_totals = food_entry_service.day_totals_for(db, items)
+    day_totals = food_entry_service.day_totals_for(db, items, tz_offset_minutes)
+    shift = timedelta(minutes=tz_offset_minutes)
     return PaginatedAdminFoodEntries(
-        items=[_to_admin_out(e, day_totals.get((e.user_id, e.consumed_at.date()), e.calories)) for e in items],
+        items=[
+            _to_admin_out(e, day_totals.get((e.user_id, (e.consumed_at - shift).date()), e.calories)) for e in items
+        ],
         total=total,
         page_size=page_size,
         next_cursor=next_cursor,
@@ -105,11 +109,15 @@ def get_total_calories(
 @router.post("/food-entries", response_model=AdminFoodEntryOut, status_code=201)
 def create_entry(
     payload: AdminFoodEntryCreate,
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
     entry = food_entry_service.create_entry_admin(db, payload)
-    day_total = food_entry_service.day_totals_for(db, [entry]).get((entry.user_id, entry.consumed_at.date()), entry.calories)
+    shift = timedelta(minutes=tz_offset_minutes)
+    day_total = food_entry_service.day_totals_for(db, [entry], tz_offset_minutes).get(
+        (entry.user_id, (entry.consumed_at - shift).date()), entry.calories
+    )
     return _to_admin_out(entry, day_total)
 
 
@@ -118,12 +126,16 @@ def create_entry(
 def update_entry(
     entry_id: int,
     payload: FoodEntryUpdate,
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
     entry = food_entry_service.get_entry_or_404(db, entry_id, admin, is_admin=True)
     entry = food_entry_service.update_entry(db, entry, payload, is_admin=True)
-    day_total = food_entry_service.day_totals_for(db, [entry]).get((entry.user_id, entry.consumed_at.date()), entry.calories)
+    shift = timedelta(minutes=tz_offset_minutes)
+    day_total = food_entry_service.day_totals_for(db, [entry], tz_offset_minutes).get(
+        (entry.user_id, (entry.consumed_at - shift).date()), entry.calories
+    )
     return _to_admin_out(entry, day_total)
 
 

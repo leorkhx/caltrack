@@ -46,16 +46,19 @@ def count_entries_for_user(
     return query.scalar() or 0
 
 
-def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date], int]:
-    """Sum of calories per (user_id, day) for just the users/date-range covered
-    by `items` — avoids pulling every entry in the table to compute totals for
-    one page's worth of rows."""
+def day_totals_for(
+    db: Session, items: list[FoodEntry], tz_offset_minutes: int = 0
+) -> dict[tuple[int, date], int]:
+    """Sum of calories per (user_id, viewer-local day) for just the users/date-range
+    covered by `items` — avoids pulling every entry in the table to compute totals
+    for one page's worth of rows."""
     if not items:
         return {}
+    shift = timedelta(minutes=tz_offset_minutes)
     user_ids = {e.user_id for e in items}
-    dates = [e.consumed_at.date() for e in items]
-    start = datetime.combine(min(dates), time.min)
-    end = datetime.combine(max(dates), time.max)
+    local_dates = [(e.consumed_at - shift).date() for e in items]
+    start = datetime.combine(min(local_dates), time.min) + shift
+    end = datetime.combine(max(local_dates), time.max) + shift
     rows = (
         db.query(FoodEntry.user_id, FoodEntry.consumed_at, FoodEntry.calories)
         .filter(FoodEntry.user_id.in_(user_ids))
@@ -65,7 +68,7 @@ def day_totals_for(db: Session, items: list[FoodEntry]) -> dict[tuple[int, date]
     )
     totals: dict[tuple[int, date], int] = {}
     for user_id, consumed_at, calories in rows:
-        key = (user_id, consumed_at.date())
+        key = (user_id, (consumed_at - shift).date())
         totals[key] = totals.get(key, 0) + calories
     return totals
 
@@ -101,6 +104,7 @@ def list_entries_admin(
     search: Optional[str] = None,
     sort: str = "date_desc",
     day_status: Optional[str] = None,
+    tz_offset_minutes: int = 0,
 ):
     query = db.query(FoodEntry).options(joinedload(FoodEntry.user))
     if user_id is not None:
@@ -113,7 +117,7 @@ def list_entries_admin(
         query = query.filter(FoodEntry.food_name.ilike(f"%{search}%"))
 
     if day_status in ("over", "within"):
-        day_col = func.date(FoodEntry.consumed_at)
+        day_col = local_day_expr(tz_offset_minutes)
         day_totals_subq = (
             db.query(
                 FoodEntry.user_id.label("user_id"),

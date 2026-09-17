@@ -137,19 +137,17 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
     touched && (!/^\d+$/.test(calories) || Number(calories) < 1) ? "Enter a positive whole number." : "";
   const quantityError =
     touched && (!/^\d*\.?\d+$/.test(quantity) || Number(quantity) <= 0) ? "Enter a positive number." : "";
-  const hasErrors = Boolean(nameError || caloriesError || quantityError);
+  const isInvalid =
+    name.trim().length < 2 ||
+    !/^\d+$/.test(calories) ||
+    Number(calories) < 1 ||
+    !/^\d*\.?\d+$/.test(quantity) ||
+    Number(quantity) <= 0;
   const mutation = isEdit ? update : create;
 
   const handleSubmit = async () => {
     setTouched(true);
-    if (
-      name.trim().length < 2 ||
-      !/^\d+$/.test(calories) ||
-      Number(calories) < 1 ||
-      !/^\d*\.?\d+$/.test(quantity) ||
-      Number(quantity) <= 0
-    )
-      return;
+    if (isInvalid) return;
     const input = {
       food_name: name.trim(),
       calories: Number(calories),
@@ -346,7 +344,7 @@ export function FavoriteDialog({ open, onClose, initialFavorite }: FavoriteDialo
             <Button onClick={onClose} color="inherit">
               Cancel
             </Button>
-            <Button variant="contained" onClick={handleSubmit} disabled={mutation.isPending || hasErrors}>
+            <Button variant="contained" onClick={handleSubmit} disabled={mutation.isPending || isInvalid}>
               {isEdit ? "Save changes" : "Add favorite"}
             </Button>
           </Stack>

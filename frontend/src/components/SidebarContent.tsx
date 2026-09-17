@@ -17,7 +17,8 @@ import { fetchAllEntries, fetchAllUsers, fetchReports, fetchTopFoods } from "../
 import { queryKeys } from "../api/queryClient";
 import type { User } from "../types";
 
-const ADMIN_ENTRIES_DEFAULT_PARAMS = { page: 1, page_size: 10 };
+// Must match AllEntriesPage's initial query exactly, or this prefetch just wastes a request.
+const ADMIN_ENTRIES_DEFAULT_PARAMS = { page_size: 20, sort: "date_desc" };
 const APP_NAME = import.meta.env.VITE_APP_NAME || "CalTrack";
 const TEXT_TRANSITION = "max-width 0.22s ease, opacity 0.15s ease, margin 0.22s ease";
 const RAIL_HOVER_SX = {
