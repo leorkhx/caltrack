@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { localRangeToUtc } from "../utils/validation";
+import { localRangeToUtc, tzOffsetParam } from "../utils/validation";
 import type { AdminFoodEntry, FoodEntryInput, PaginatedAdminFoodEntries, ReportsData, TopFoodsData, User } from "../types";
 import type { DateRangeParams } from "./foodEntries";
 
@@ -25,7 +25,7 @@ export interface AdminDayStats {
 
 export async function fetchEntryStats(params: AdminStatsParams = {}): Promise<AdminDayStats> {
   const { data } = await apiClient.get<AdminDayStats>("/api/admin/food-entries/stats", {
-    params: { ...params, ...localRangeToUtc(params) },
+    params: { ...params, ...localRangeToUtc(params), ...tzOffsetParam() },
   });
   return data;
 }
@@ -63,7 +63,7 @@ export interface ReportsParams {
 }
 
 export async function fetchReports(params: ReportsParams = {}): Promise<ReportsData> {
-  const { data } = await apiClient.get<ReportsData>("/api/admin/reports", { params });
+  const { data } = await apiClient.get<ReportsData>("/api/admin/reports", { params: { ...params, ...tzOffsetParam() } });
   return data;
 }
 
@@ -75,7 +75,9 @@ export interface TopFoodsParams {
 }
 
 export async function fetchTopFoods(params: TopFoodsParams = {}): Promise<TopFoodsData> {
-  const { data } = await apiClient.get<TopFoodsData>("/api/admin/foods/top", { params });
+  const { data } = await apiClient.get<TopFoodsData>("/api/admin/foods/top", {
+    params: { ...params, ...tzOffsetParam() },
+  });
   return data;
 }
 

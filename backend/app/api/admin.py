@@ -78,10 +78,11 @@ def get_entries_stats(
     user_id: Optional[int] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    stats = food_entry_service.get_admin_day_stats(db, user_id, date_from, date_to)
+    stats = food_entry_service.get_admin_day_stats(db, user_id, date_from, date_to, tz_offset_minutes)
     return AdminDayStatsOut(
         avg_per_logged_day=stats["avg_per_logged_day"],
         days_over_limit=stats["days_over_limit"],

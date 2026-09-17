@@ -91,4 +91,13 @@ export function hasErrors(errors: EntryFormErrors): boolean {
   return Boolean(errors.foodName || errors.calories || errors.quantity || errors.date);
 }
 
-export { todayIso, localDateKey, localRangeToUtc };
+/** The viewer's UTC offset in minutes, in the same convention the backend
+ * expects (JS's own Date.getTimezoneOffset(): UTC = local + offset). Send
+ * this on any admin endpoint that groups or anchors data by "day" so it
+ * resolves "today" and day-buckets against the viewer's timezone instead of
+ * the server's. */
+function tzOffsetParam(): { tz_offset_minutes: number } {
+  return { tz_offset_minutes: new Date().getTimezoneOffset() };
+}
+
+export { todayIso, localDateKey, localRangeToUtc, tzOffsetParam };

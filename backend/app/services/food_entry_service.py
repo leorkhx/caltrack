@@ -21,6 +21,16 @@ MAX_ENTRIES_PER_REQUEST = 2000
 # anyone not in UTC — e.g. a just-created entry excluded from "today"'s list.
 
 
+def local_day_expr(offset_minutes: int):
+    """SQL expression for the viewer-local calendar day of `consumed_at`
+    (stored in UTC). `offset_minutes` follows JS's Date.getTimezoneOffset()
+    convention: UTC = local + offset_minutes, so local = UTC - offset_minutes.
+    Grouping by the raw UTC day (plain `func.date(consumed_at)`) puts entries
+    near midnight under the wrong day for anyone not in UTC."""
+    delta_minutes = -offset_minutes
+    return func.date(func.datetime(FoodEntry.consumed_at, f"{delta_minutes:+d} minutes"))
+
+
 def list_entries_for_user(
     db: Session, user_id: int, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None
 ) -> list[FoodEntry]:
@@ -162,10 +172,11 @@ def get_admin_day_stats(
     user_id: Optional[int] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
+    tz_offset_minutes: int = 0,
 ):
     """Per-(user, day) calorie totals computed by the DB via GROUP BY, so this
     scales to any table size instead of summing rows fetched into memory."""
-    day_col = func.date(FoodEntry.consumed_at)
+    day_col = local_day_expr(tz_offset_minutes)
     query = (
         db.query(
             FoodEntry.user_id,

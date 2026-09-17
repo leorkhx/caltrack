@@ -18,10 +18,11 @@ def get_reports(
     days: Optional[int] = Query(7, ge=1, le=3650),
     all_time: bool = Query(False, alias="all"),
     user_id: Optional[int] = Query(None),
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    return build_reports(db, days=None if all_time else days, user_id=user_id)
+    return build_reports(db, days=None if all_time else days, user_id=user_id, tz_offset_minutes=tz_offset_minutes)
 
 
 @router.get("/foods/top", response_model=TopFoodsOut)
@@ -30,7 +31,10 @@ def get_top_foods(
     all_time: bool = Query(False, alias="all"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    return build_top_foods(db, days=None if all_time else days, page=page, page_size=page_size)
+    return build_top_foods(
+        db, days=None if all_time else days, page=page, page_size=page_size, tz_offset_minutes=tz_offset_minutes
+    )
