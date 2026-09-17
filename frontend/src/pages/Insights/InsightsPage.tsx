@@ -21,6 +21,7 @@ import { LineChart } from "@mui/x-charts/LineChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { useMyEntries, useMyEntriesCount } from "../../hooks/useMyEntries";
 import { localDateKey } from "../../utils/validation";
+import { longestStreak } from "../../utils/streak";
 import type { FoodEntry, User } from "../../types";
 
 interface InsightsPageProps {
@@ -153,22 +154,7 @@ export function InsightsPage({ currentUser }: InsightsPageProps) {
   const limit = currentUser.daily_calorie_limit;
   const daysWithinLimit = daysLogged.filter((d) => d.calories <= limit).length;
 
-  const streak = useMemo(() => {
-    // Longest run of consecutive logged, within-limit days anywhere in the
-    // range — not anchored to today, so an old streak still shows up even
-    // if nothing's been logged recently.
-    let best = 0;
-    let current = 0;
-    for (const d of dailyTotals) {
-      if (d.calories > 0 && d.calories <= limit) {
-        current++;
-        best = Math.max(best, current);
-      } else {
-        current = 0;
-      }
-    }
-    return best;
-  }, [dailyTotals, limit]);
+  const streak = useMemo(() => longestStreak(dailyTotals, limit), [dailyTotals, limit]);
 
   const macroTotals = useMemo(() => {
     return dailyTotals.reduce(

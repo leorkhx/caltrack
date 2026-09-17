@@ -548,7 +548,7 @@ export function EntryDialog({
             <Button onClick={onClose} color="inherit">
               Cancel
             </Button>
-            <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
+            <Button variant="contained" onClick={handleSubmit} disabled={submitting || hasErrors(errors)}>
               {isEdit ? "Save changes" : "Add entry"}
             </Button>
           </Stack>
